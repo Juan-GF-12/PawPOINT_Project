@@ -1,0 +1,27 @@
+# Archivos del Entorno Virtual
+venv/
+/venv/
+env/
+/env/
+
+# Archivo de secretos y contraseñas (¡MUY IMPORTANTE!)
+.env
+/.env
+
+# Base de datos SQLite (aunque no la uses, es buena práctica)
+db.sqlite3
+*.sqlite3
+
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Carpetas de IDE
+.vscode/
+.idea/
+
+# (Más adelante) Carpetas de archivos estáticos y media de producción
+/static/
+/media/
