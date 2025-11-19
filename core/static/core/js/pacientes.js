@@ -205,7 +205,7 @@ function agregarFilaPaciente(paciente) {
         <td>${paciente.raza || 'N/A'}</td>
         <td>Tutor ID: ${paciente.tutor}</td>
         <td>
-            <button class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></button>
+            <a href="/historial/?paciente_id=${paciente.id}" class="btn btn-sm btn-outline-primary" title="Ver historial médico"><i class="fas fa-eye"></i></a>
             <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-edit"></i></button>
         </td>
     `;

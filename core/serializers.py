@@ -1,46 +1,102 @@
 # core/serializers.py
+"""Serializadores para la API REST del sistema veterinario.
+Estos componentes transforman los modelos de Django a/desde JSON.
+"""
 from rest_framework import serializers
 from .models import Tutor, Paciente, Cita, FichaClinica, Tratamiento, Rol
 from django.contrib.auth.models import User
 
-# Serializador para el modelo User (para mostrar info del Veterinario)
+# ============================================================================
+# SERIALIZADORES DE AUTENTICACIÓN Y ROLES
+# ============================================================================
+
 class UserSerializer(serializers.ModelSerializer):
+    """Serializa datos básicos del usuario (para mostrar veterinarios)."""
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email']
 
-# Serializador para el modelo Rol
 class RolSerializer(serializers.ModelSerializer):
+    """Serializa los roles disponibles en el sistema."""
     class Meta:
         model = Rol
-        fields = '__all__' # Incluye todos los campos
+        fields = '__all__'
 
-# Serializador para el modelo Tutor
+# ============================================================================
+# SERIALIZADORES DE MODELOS PRINCIPALES
+# ============================================================================
+
 class TutorSerializer(serializers.ModelSerializer):
+    """Serializa los datos de tutores (dueños de mascotas)."""
     class Meta:
         model = Tutor
         fields = '__all__'
 
-# Serializador para el modelo Paciente
 class PacienteSerializer(serializers.ModelSerializer):
+    """Serializa los datos de pacientes (mascotas)."""
     class Meta:
         model = Paciente
         fields = '__all__'
 
-# Serializador para el modelo Cita
 class CitaSerializer(serializers.ModelSerializer):
+    """Serializa citas con validación de solapamientos."""
     class Meta:
         model = Cita
         fields = '__all__'
+    
+    def validate(self, data):
+        """Valida que no existan citas superpuestas.
+        
+        Se verifica que:
+        1. El veterinario no tenga otra cita en el mismo horario
+        2. El paciente no tenga otra cita en el mismo horario
+        
+        Si existen conflictos, se lanza una excepción de validación.
+        """
+        fecha_hora = data.get('fecha_hora')
+        veterinario = data.get('veterinario')
+        paciente = data.get('paciente')
+        cita_id = self.instance.id if self.instance else None
+        
+        # Se verifica si el veterinario tiene otra cita en la misma hora
+        if fecha_hora and veterinario:
+            citas_veterinario = Cita.objects.filter(
+                veterinario=veterinario,
+                fecha_hora=fecha_hora
+            ).exclude(id=cita_id)
+            
+            if citas_veterinario.exists():
+                raise serializers.ValidationError(
+                    f"El veterinario ya tiene una cita agendada para {fecha_hora}"
+                )
+        
+        # Se verifica si el paciente tiene otra cita en la misma hora
+        if fecha_hora and paciente:
+            citas_paciente = Cita.objects.filter(
+                paciente=paciente,
+                fecha_hora=fecha_hora
+            ).exclude(id=cita_id)
+            
+            if citas_paciente.exists():
+                raise serializers.ValidationError(
+                    f"El paciente ya tiene una cita agendada para {fecha_hora}"
+                )
+        
+        return data
 
-# Serializador para el modelo FichaClinica
 class FichaClinicaSerializer(serializers.ModelSerializer):
+    """Serializa fichas clínicas con veterinario como campo de solo lectura.
+    
+    El veterinario se asigna automáticamente desde el usuario autenticado
+    mediante el método perform_create del ViewSet.
+    """
     class Meta:
         model = FichaClinica
         fields = '__all__'
+        read_only_fields = ['veterinario']
 
-# Serializador para el modelo Tratamiento
 class TratamientoSerializer(serializers.ModelSerializer):
+    """Serializa tratamientos asociados a fichas clínicas."""
     class Meta:
         model = Tratamiento
         fields = '__all__'
