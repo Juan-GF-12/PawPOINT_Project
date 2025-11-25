@@ -8,11 +8,18 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from .models import Tutor, Paciente, Cita, FichaClinica, Tratamiento, Rol
 from .serializers import (
-    TutorSerializer, PacienteSerializer, CitaSerializer, 
-    FichaClinicaSerializer, TratamientoSerializer, RolSerializer
+    RegisterSerializer, TutorSerializer, PacienteSerializer, CitaSerializer, 
+    FichaClinicaSerializer, TratamientoSerializer, RolSerializer, UserSerializer,
 )
 from django.shortcuts import render
 from django.db.models import Q
+
+from .serializers import RegisterSerializer
+from rest_framework import generics, permissions
+from django.contrib.auth.models import User
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import generics, permissions
 
 # ============================================================================
 # VIEWSETS API CON CONTROL DE ACCESO POR ROLES
@@ -200,6 +207,23 @@ class RolViewSet(viewsets.ModelViewSet):
     serializer_class = RolSerializer
     permission_classes = [IsAuthenticated]
 
+class RegisterView(generics.CreateAPIView):
+    """Vista para registrar nuevos usuarios."""
+    queryset = User.objects.all()
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = RegisterSerializer
+
+class VeterinarioListView(APIView):
+    """Vista para listar todos los veterinarios registrados."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        veterinarios = User.objects.filter(
+            profile__rol__nombre='Veterinario'
+        )
+        data = [{'id': v.id, 'nombre': f"{v.first_name} {v.last_name}"} for v in veterinarios]
+        return Response(data)
+    
 # ============================================================================
 # VISTAS PARA RENDERIZAR TEMPLATES DEL FRONTEND
 # ============================================================================
@@ -227,3 +251,11 @@ def citas_view(request):
 def historial_view(request):
     """Renderiza la página de historial médico con timeline."""
     return render(request, 'core/historial_medico.html')
+
+def register_view(request):
+    """Renderiza la página de registro de nuevos usuarios."""
+    return render(request, 'core/register.html')
+
+def tutores_view(request):
+    """Renderiza la página de gestión de tutores."""
+    return render(request, 'core/tutores.html')

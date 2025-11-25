@@ -1,0 +1,81 @@
+/* glass_theme.css
+   Define las variables y clases base para el efecto Glassmorphism 
+   que no cubre Tailwind por defecto.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    /* Fondo degradado animado sutil */
+    background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 50%, #7c3aed 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    color: #ffffff;
+    min-height: 100vh;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1); 
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3); 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5); 
+}
+
+/* Utilidad Glassmorphism Base */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Inputs Glass */
+.glass-input {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+}
+.glass-input:focus {
+    background: rgba(255, 255, 255, 0.25);
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+.glass-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* FullCalendar Overrides para tema oscuro/glass */
+.fc-theme-standard .fc-scrollgrid, 
+.fc-theme-standard td, 
+.fc-theme-standard th {
+    border-color: rgba(255,255,255,0.1) !important;
+}
+.fc .fc-col-header-cell-cushion, 
+.fc .fc-daygrid-day-number,
+.fc .fc-timegrid-slot-label-cushion {
+    color: white !important;
+}
+.fc-day-today {
+    background: rgba(255,255,255,0.1) !important;
+}
+.fc-button-primary {
+    background-color: rgba(255,255,255,0.2) !important;
+    border-color: rgba(255,255,255,0.3) !important;
+}
+.fc-button-primary:hover {
+    background-color: rgba(255,255,255,0.3) !important;
+}
+.fc-event {
+    cursor: pointer;
+}

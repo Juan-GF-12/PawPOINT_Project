@@ -1,248 +1,122 @@
+{% extends 'core/base_dashboard.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historial Médico - PawPOINT</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'core/css/main.css' %}">
-    <style>
-        .timeline-card {
-            border-left: 4px solid #0d6efd;
-            transition: all 0.3s ease;
-        }
-        .timeline-card:hover {
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        }
-        .timeline-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-        }
-        .timeline-date {
-            font-weight: 600;
-            color: #0d6efd;
-            font-size: 0.95rem;
-        }
-        .timeline-vet {
-            font-size: 0.85rem;
-            color: #6c757d;
-        }
-        .diagnóstico-box {
-            background-color: #f8f9fa;
-            border-left: 3px solid #198754;
-            padding: 0.75rem;
-            margin: 0.75rem 0;
-            border-radius: 0.25rem;
-        }
-        .vitals-row {
-            display: flex;
-            gap: 1rem;
-            margin-top: 0.5rem;
-        }
-        .vital-badge {
-            background-color: #e7f3ff;
-            color: #0d6efd;
-            padding: 0.4rem 0.8rem;
-            border-radius: 0.25rem;
-            font-size: 0.9rem;
-        }
-        .profile-card {
-            position: sticky;
-            top: 80px;
-        }
-        .timeline-container {
-            max-height: calc(100vh - 180px);
-            overflow-y: auto;
-        }
-    </style>
-</head>
-<body>
-    
-    <header class="navbar navbar-light main-header">
-        <div class="container-fluid">
-            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar">
-                <span class="navbar-toggler-icon"></span>
+
+{% block title %}Historial - PawPOINT{% endblock %}
+{% block header_title %}Historial Médico{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
+
+    <!-- Tarjeta de Paciente (Sticky) -->
+    <div class="lg:col-span-1">
+        <div class="glass-panel p-6 rounded-2xl text-center sticky top-0">
+            <div class="w-24 h-24 mx-auto rounded-full bg-gradient-to-tr from-blue-400 to-purple-500 flex items-center justify-center text-4xl text-white shadow-xl mb-4 border-4 border-white/20">
+                <i class="fas fa-paw"></i>
+            </div>
+            <h2 id="paciente-nombre" class="text-2xl font-bold text-white mb-1">Cargando...</h2>
+            <div class="flex justify-center gap-2 text-sm text-blue-200 mb-4">
+                <span id="paciente-especie">-</span> • <span id="paciente-raza">-</span>
+            </div>
+            
+            <div class="bg-white/5 rounded-xl p-4 text-left space-y-2 mb-6">
+                <div class="flex justify-between">
+                    <span class="text-white/60 text-sm">Edad:</span>
+                    <span id="paciente-edad" class="font-medium">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-white/60 text-sm">Tutor:</span>
+                    <span id="paciente-tutor" class="font-medium">-</span>
+                </div>
+            </div>
+
+            <button onclick="abrirModalFicha()" class="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg font-bold transition transform hover:scale-[1.02]">
+                <i class="fas fa-file-medical mr-2"></i> Nueva Consulta
             </button>
-            
-            <div class="d-none d-md-block w-50">
-                <input type="text" class="form-control" placeholder="Buscar...">
-            </div>
-            
-            <div class="d-flex align-items-center">
-                <a href="#" class="nav-link"><i class="fas fa-bell fs-5"></i></a>
-                <a href="#" class="nav-link ms-3"><i class="fas fa-user-circle fs-5"></i></a>
-            </div>
-        </div>
-    </header>
-
-    <div class="offcanvas offcanvas-start sidebar" tabindex="-1" id="sidebar" aria-labelledby="sidebarLabel">
-        <div class="offcanvas-header border-bottom">
-            <a class="d-flex align-items-center text-decoration-none" href="{% url 'dashboard_view' %}">
-                <svg class="sidebar-logo me-2" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M256 512c141.4 0 256-114.6 256-256S397.4 0 256 0 0 114.6 0 256s114.6 256 256 256zM135.2 217.4c-8.5-8.5-8.5-22.3 0-30.8l1.1-1.1c8.5-8.5 22.3-8.5 30.8 0L224 242.7l56.9-57.1c8.5-8.5 22.3-8.5 30.8 0l1.1 1.1c8.5 8.5 8.5 22.3 0 30.8L280.1 274.6l57.1 56.9c8.5 8.5 8.5 22.3 0 30.8l-1.1 1.1c-8.5 8.5-22.3 8.5-30.8 0L248.3 306.4l-56.9 57.1c-8.5 8.5-22.3 8.5-30.8 0l-1.1-1.1c-8.5-8.5-8.5-22.3 0-30.8l57.1-56.9-57.1-56.9z"/></svg>
-                <h5 class="offcanvas-title fw-bold" id="sidebarLabel">PawPOINT</h5>
-            </a>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body p-3">
-            <nav class="nav flex-column">
-                <a class="nav-link" href="{% url 'dashboard_view' %}"><span class="icon"><i class="fas fa-chart-line"></i></span>Inicio</a>
-                <a class="nav-link" href="{% url 'citas_view' %}"><span class="icon"><i class="fas fa-calendar-alt"></i></span>Calendario Citas</a>
-                <a class="nav-link active" href="{% url 'pacientes_view' %}"><span class="icon"><i class="fas fa-paw"></i></span>Pacientes</a>
-                <a class="nav-link" href="#"><span class="icon"><i class="fas fa-user-shield"></i></span>Tutores</a>
-                <a class="nav-link" href="#"><span class="icon"><i class="fas fa-notes-medical"></i></span>Historial Clínico</a>
-                <hr>
-                <a class="nav-link" href="#"><span class="icon"><i class="fas fa-boxes"></i></span>Medicamentos</a>
-                <a class="nav-link" href="#"><span class="icon"><i class="fas fa-cogs"></i></span>Configuración</a>
-            </nav>
         </div>
     </div>
 
-    <main class="main-content">
-        <div class="container-fluid">
-            <div class="row g-4">
-                <!-- Columna Izquierda: Perfil del Paciente (30%) -->
-                <div class="col-lg-3">
-                    <div class="card profile-card">
-                        <div class="card-body text-center">
-                            <!-- Avatar placeholder -->
-                            <div class="mb-3">
-                                <div style="width: 120px; height: 120px; background-color: #e9ecef; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-paw" style="font-size: 3rem; color: #6c757d;"></i>
-                                </div>
-                            </div>
-
-                            <!-- Información del Paciente -->
-                            <h4 id="paciente-nombre" class="card-title fw-bold mb-1">-</h4>
-                            <p class="text-muted mb-2">
-                                <span id="paciente-especie">-</span> | 
-                                <span id="paciente-raza">-</span>
-                            </p>
-                            
-                            <!-- Edad y Tutor -->
-                            <hr>
-                            <div class="text-start">
-                                <small class="text-muted">Edad:</small>
-                                <p id="paciente-edad" class="mb-2">-</p>
-                                
-                                <small class="text-muted">Tutor:</small>
-                                <p id="paciente-tutor" class="mb-2">-</p>
-                            </div>
-
-                            <!-- Botón para nueva ficha -->
-                            <button class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#modalFicha" onclick="abrirModalFicha()">
-                                <i class="fas fa-plus-circle me-2"></i>Nueva Ficha
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Columna Derecha: Timeline (70%) -->
-                <div class="col-lg-9">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h2>Historial Clínico</h2>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
-                            <i class="fas fa-sync-alt me-2"></i>Actualizar
-                        </button>
-                    </div>
-
-                    <!-- Timeline Container -->
-                    <div id="timeline-container" class="timeline-container">
-                        <!-- Las fichas se cargarán aquí dinámicamente -->
-                        <div class="text-center text-muted py-5">
-                            <i class="fas fa-spinner fa-spin fs-4"></i>
-                            <p class="mt-2">Cargando historial...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Modal para Nueva/Editar Ficha -->
-    <div class="modal fade" id="modalFicha" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nueva Ficha Clínica</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Alerta de error -->
-                    <div id="ficha-error" class="alert alert-danger d-none" role="alert"></div>
-
-                    <form id="formFicha">
-                        <!-- Motivo de Consulta -->
-                        <div class="mb-3">
-                            <label for="ficha-motivo" class="form-label">Motivo de Consulta</label>
-                            <input type="text" class="form-control" id="ficha-motivo" required>
-                        </div>
-
-                        <!-- Diagnóstico -->
-                        <div class="mb-3">
-                            <label for="ficha-diagnostico" class="form-label">Diagnóstico</label>
-                            <textarea class="form-control" id="ficha-diagnostico" rows="3" required></textarea>
-                        </div>
-
-                        <!-- Notas Médicas -->
-                        <div class="mb-3">
-                            <label for="ficha-notas" class="form-label">Notas Médicas</label>
-                            <textarea class="form-control" id="ficha-notas" rows="2"></textarea>
-                        </div>
-
-                        <!-- Vitales -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label for="ficha-peso" class="form-label">Peso (kg)</label>
-                                <input type="number" class="form-control" id="ficha-peso" step="0.1">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="ficha-temperatura" class="form-label">Temperatura (°C)</label>
-                                <input type="number" class="form-control" id="ficha-temperatura" step="0.1">
-                            </div>
-                        </div>
-
-                        <hr class="my-4">
-
-                        <!-- Tratamiento Rápido -->
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="agregarTratamiento" onchange="toggleTratamientoFields()">
-                            <label class="form-check-label" for="agregarTratamiento">
-                                ¿Añadir tratamiento?
-                            </label>
-                        </div>
-
-                        <!-- Campos de Tratamiento (ocultos por defecto) -->
-                        <div id="tratamiento-fields" class="d-none">
-                            <div class="mb-3">
-                                <label for="tratamiento-medicamento" class="form-label">Medicamento</label>
-                                <input type="text" class="form-control" id="tratamiento-medicamento">
-                            </div>
-                            <div class="mb-3">
-                                <label for="tratamiento-instrucciones" class="form-label">Dosis/Instrucciones</label>
-                                <textarea class="form-control" id="tratamiento-instrucciones" rows="2"></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label for="tratamiento-fecha-fin" class="form-label">Fecha de Fin (opcional)</label>
-                                <input type="date" class="form-control" id="tratamiento-fecha-fin">
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" onclick="guardarFicha()">
-                        <i class="fas fa-save me-2"></i>Guardar
-                    </button>
-                </div>
+    <!-- Timeline -->
+    <div class="lg:col-span-3">
+        <div id="timeline-container" class="space-y-6 pb-10">
+            <!-- Los items del timeline se inyectan aquí por JS -->
+            <div class="text-center py-10 text-white/50">
+                <i class="fas fa-spinner fa-spin text-2xl"></i>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{% static 'core/js/historial.js' %}"></script>
-</body>
-</html>
+<!-- Modal Nueva Ficha -->
+<div class="modal fade" id="modalFicha" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-panel border-0 text-white">
+            <div class="modal-header border-b border-white/10">
+                <h5 class="modal-title font-bold text-xl">Registrar Consulta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-6">
+                <div id="ficha-error" class="hidden bg-red-500/20 text-red-100 p-2 rounded mb-3 text-sm"></div>
+
+                <form id="formFicha" class="space-y-4">
+                    <div>
+                        <label class="text-sm font-medium text-white/70">Motivo Consulta (*)</label>
+                        <input type="text" id="ficha-motivo" class="w-full p-2.5 rounded-lg glass-input mt-1" required>
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-medium text-white/70">Diagnóstico (*)</label>
+                        <textarea id="ficha-diagnostico" rows="3" class="w-full p-2.5 rounded-lg glass-input mt-1" required></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm font-medium text-white/70">Peso (kg)</label>
+                            <input type="number" step="0.1" id="ficha-peso" class="w-full p-2.5 rounded-lg glass-input mt-1">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-white/70">Temp (°C)</label>
+                            <input type="number" step="0.1" id="ficha-temperatura" class="w-full p-2.5 rounded-lg glass-input mt-1">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-medium text-white/70">Notas Adicionales</label>
+                        <textarea id="ficha-notas" rows="2" class="w-full p-2.5 rounded-lg glass-input mt-1"></textarea>
+                    </div>
+
+                    <!-- Toggle Tratamiento -->
+                    <div class="pt-4 border-t border-white/10">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="agregarTratamiento" onchange="toggleTratamientoFields()" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="font-medium text-blue-200">Añadir Tratamiento / Receta</span>
+                        </label>
+                    </div>
+
+                    <div id="tratamiento-fields" class="hidden space-y-4 bg-white/5 p-4 rounded-xl border border-white/10">
+                        <div>
+                            <label class="text-sm font-medium text-white/70">Medicamento</label>
+                            <input type="text" id="tratamiento-medicamento" class="w-full p-2.5 rounded-lg glass-input mt-1">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-white/70">Instrucciones / Dosis</label>
+                            <textarea id="tratamiento-instrucciones" rows="2" class="w-full p-2.5 rounded-lg glass-input mt-1"></textarea>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-white/70">Fecha Fin (Opcional)</label>
+                            <input type="date" id="tratamiento-fecha-fin" class="w-full p-2.5 rounded-lg glass-input mt-1">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-t border-white/10">
+                <button type="button" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" onclick="guardarFicha()" class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 font-bold shadow-lg">Guardar Ficha</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/historial.js' %}"></script>
+{% endblock %}

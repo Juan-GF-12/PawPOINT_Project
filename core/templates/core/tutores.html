@@ -1,0 +1,111 @@
+{% extends 'core/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Tutores - PawPOINT{% endblock %}
+{% block header_title %}Gestión de Tutores{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-full space-y-6">
+    
+    <!-- Encabezado y Acción -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h3 class="text-2xl font-bold text-white">Directorio de Clientes</h3>
+            <p class="text-blue-200 text-sm">Administra la información de contacto de los dueños.</p>
+        </div>
+        <button id="btn-nuevo-tutor" class="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-lg shadow-purple-600/30 transition transform hover:-translate-y-1 flex items-center gap-2">
+            <i class="fas fa-user-plus"></i>
+            <span>Nuevo Tutor</span>
+        </button>
+    </div>
+
+    <!-- Lista de Tutores (Estilo Tarjetas para variar del estilo tabla) -->
+    <div class="glass-panel rounded-2xl p-6 flex-1 overflow-hidden flex flex-col">
+        <div class="table-responsive h-full overflow-auto">
+            <table class="w-full text-left border-separate border-spacing-y-2">
+                <thead>
+                    <tr class="text-blue-200 text-sm font-semibold">
+                        <th class="pb-4 pl-4">RUT</th>
+                        <th class="pb-4">Nombre Completo</th>
+                        <th class="pb-4">Contacto</th>
+                        <th class="pb-4">Email</th>
+                        <th class="pb-4 text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tutores-table-body">
+                    <!-- Loading -->
+                    <tr id="loading-row">
+                        <td colspan="5" class="text-center py-10 text-white/60">
+                             <div class="flex flex-col items-center">
+                                <i class="fas fa-circle-notch fa-spin text-3xl mb-3 text-purple-400"></i>
+                                <span>Cargando datos...</span>
+                             </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Tutor (Estilo Glass) -->
+<div class="modal fade" id="tutorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-panel border-0 text-white">
+            <div class="modal-header border-b border-white/10">
+                <h5 class="modal-title font-bold text-xl">Registrar Tutor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-6">
+                <div id="modal-alert-error-tutor" class="hidden bg-red-500/20 border border-red-500/50 text-red-100 p-3 rounded-lg mb-4 text-sm">
+                    Error al guardar.
+                </div>
+                
+                <form id="tutor-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium text-white/70">RUT (*)</label>
+                        <input type="text" id="tutor-rut" class="w-full p-2.5 rounded-lg glass-input mt-1" required>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-white/70">Nombre (*)</label>
+                        <input type="text" id="tutor-nombre" class="w-full p-2.5 rounded-lg glass-input mt-1" required>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-white/70">Apellido (*)</label>
+                        <input type="text" id="tutor-apellido" class="w-full p-2.5 rounded-lg glass-input mt-1" required>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-white/70">Teléfono (*)</label>
+                        <input type="text" id="tutor-telefono" class="w-full p-2.5 rounded-lg glass-input mt-1" required>
+                    </div>
+                    
+                    <div class="col-span-2">
+                        <label class="text-sm font-medium text-white/70">Email (*)</label>
+                        <input type="email" id="tutor-email" class="w-full p-2.5 rounded-lg glass-input mt-1" required>
+                    </div>
+                    
+                    <div class="col-span-2">
+                        <label class="text-sm font-medium text-white/70">Dirección</label>
+                        <textarea id="tutor-direccion" rows="2" class="w-full p-2.5 rounded-lg glass-input mt-1"></textarea>
+                    </div>
+                    
+                    <div class="col-span-2 mt-4 flex justify-end gap-3">
+                        <button type="button" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" id="btn-guardar-tutor" class="px-6 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-lg transition">
+                            <span id="btn-guardar-texto-tutor">Guardar</span>
+                            <span id="btn-guardar-spinner-tutor" class="hidden"><i class="fas fa-spinner fa-spin"></i></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/tutores.js' %}"></script>
+{% endblock %}

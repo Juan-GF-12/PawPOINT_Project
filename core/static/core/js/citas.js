@@ -129,7 +129,7 @@ function cargarCitasDelAPI(successCallback, failureCallback) {
  * Se obtiene del endpoint /api/tutores/
  */
 function cargarVeterinarios() {
-    fetch('/api/tutores/', {
+    fetch('/api/veterinarios/', {
         headers: getHeaders()
     })
     .then(response => response.json())
