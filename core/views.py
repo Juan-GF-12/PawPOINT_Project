@@ -10,17 +10,15 @@ from .models import Tutor, Paciente, Cita, FichaClinica, Tratamiento, Rol
 from .serializers import (
     RegisterSerializer, TutorSerializer, PacienteSerializer, CitaSerializer, 
     FichaClinicaSerializer, TratamientoSerializer, RolSerializer, UserSerializer,
-    CurrentUserSerializer,
+    CurrentUserSerializer, RegistroTutorSerializer,
 )
 from django.shortcuts import render
 from django.db.models import Q
 
-from .serializers import RegisterSerializer
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import generics, permissions
 
 # ============================================================================
 # VIEWSETS API CON CONTROL DE ACCESO POR ROLES
@@ -237,6 +235,26 @@ class CurrentUserView(APIView):
         """Retorna los datos del usuario actual con su rol."""
         serializer = CurrentUserSerializer(request.user)
         return Response(serializer.data)
+
+class RegistroTutorView(APIView):
+    """Vista para registrar nuevos tutores.
+    
+    Esta es una vista pública (sin autenticación requerida) que permite
+    que nuevos tutores se registren en el sistema.
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        """Crea un nuevo tutor con sus credenciales."""
+        serializer = RegistroTutorSerializer(data=request.data)
+        if serializer.is_valid():
+            tutor = serializer.save()
+            return Response({
+                'success': True,
+                'message': f'Tutor {tutor.nombre} registrado exitosamente',
+                'tutor_id': tutor.id
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 # ============================================================================
 # VISTAS PARA RENDERIZAR TEMPLATES DEL FRONTEND
@@ -281,4 +299,9 @@ def portal_view(request):
     Contiene información específica del tutor autenticado.
     """
     return render(request, 'core/portal_tutor.html')
+
+def registro_tutor_view(request):
+    """Renderiza la página de registro para nuevos tutores."""
+    return render(request, 'core/registro.html')
+
 
