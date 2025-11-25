@@ -11,10 +11,15 @@ from django.contrib.auth.models import User
 # ============================================================================
 
 class UserSerializer(serializers.ModelSerializer):
-    """Serializa datos básicos del usuario (para mostrar veterinarios)."""
+    """Serializa datos básicos del usuario incluyendo su rol.
+    
+    Usado para mostrar información del usuario con su rol incluido.
+    """
+    rol = serializers.CharField(source='profile.rol.nombre', read_only=True)
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'rol']
 
 class CurrentUserSerializer(serializers.ModelSerializer):
     """Serializa datos del usuario actual incluyendo su rol.
