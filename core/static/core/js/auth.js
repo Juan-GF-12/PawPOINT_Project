@@ -40,14 +40,40 @@ document.getElementById('login-form').addEventListener('submit', async function(
         localStorage.setItem('accessToken', data.access);
         localStorage.setItem('refreshToken', data.refresh);
 
-        // 6. Redirigir al dashboard
-        window.location.href = '/dashboard/'; // Iremos a la URL del dashboard
+        // 6. NUEVO: Obtener datos del usuario actual incluyendo su rol
+        const meResponse = await fetch('/api/me/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${data.access}`
+            }
+        });
+
+        if (!meResponse.ok) {
+            throw new Error('No se pudo obtener información del usuario');
+        }
+
+        const userData = await meResponse.json();
+
+        // 7. NUEVO: Redireccionar según el rol del usuario
+        if (userData.rol === 'Veterinario' || userData.rol === 'Asistente' || userData.rol === 'Administrador') {
+            // Usuarios de staff van al dashboard
+            window.location.href = '/dashboard/';
+        } else if (userData.rol === 'Tutor') {
+            // Tutores van al portal exclusivo
+            window.location.href = '/portal/';
+        } else {
+            // Usuario sin rol asignado
+            throw new Error('Usuario sin rol asignado. Contacte al administrador.');
+        }
 
     } catch (error) {
-        // 7. Si hay un error, mostrar alerta
+        // 8. Si hay un error, mostrar alerta
+        console.error('Error en login:', error);
         errorAlert.classList.remove('d-none');
+        errorAlert.textContent = error.message || 'Error en el login';
     } finally {
-        // 8. Ocultar spinner y mostrar texto del botón
+        // 9. Ocultar spinner y mostrar texto del botón
         btnText.classList.remove('d-none');
         btnSpinner.classList.add('d-none');
     }

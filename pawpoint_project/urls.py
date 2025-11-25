@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/register/', views.RegisterView.as_view(), name='api_register'),
     path('api/veterinarios/', views.VeterinarioListView.as_view(), name='veterinario_list'),
+    path('api/me/', views.CurrentUserView.as_view(), name='current_user'),
 
     # URLs DEL FRONTEND (corregidas a 'core')
     path('', views.index_view, name='index_view'),
@@ -36,4 +37,5 @@ urlpatterns = [
     path('historial/', views.historial_view, name='historial_view'),
     path('register/', views.register_view, name='register_view'),
     path('tutores/', views.tutores_view, name='tutores_view'),
+    path('portal/', views.portal_view, name='portal_view'),
 ]

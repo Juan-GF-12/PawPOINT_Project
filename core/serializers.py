@@ -16,6 +16,25 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'email']
 
+class CurrentUserSerializer(serializers.ModelSerializer):
+    """Serializa datos del usuario actual incluyendo su rol.
+    
+    Se utiliza en el endpoint /api/me/ para devolver información del usuario
+    autenticado, incluyendo su rol, necesario para redireccionar según tipo.
+    """
+    rol = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'rol']
+    
+    def get_rol(self, obj):
+        """Obtiene el nombre del rol del usuario si existe."""
+        try:
+            return obj.profile.rol.nombre if obj.profile.rol else None
+        except:
+            return None
+
 class RolSerializer(serializers.ModelSerializer):
     """Serializa los roles disponibles en el sistema."""
     class Meta:

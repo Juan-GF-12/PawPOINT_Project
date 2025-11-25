@@ -10,6 +10,7 @@ from .models import Tutor, Paciente, Cita, FichaClinica, Tratamiento, Rol
 from .serializers import (
     RegisterSerializer, TutorSerializer, PacienteSerializer, CitaSerializer, 
     FichaClinicaSerializer, TratamientoSerializer, RolSerializer, UserSerializer,
+    CurrentUserSerializer,
 )
 from django.shortcuts import render
 from django.db.models import Q
@@ -223,6 +224,19 @@ class VeterinarioListView(APIView):
         )
         data = [{'id': v.id, 'nombre': f"{v.first_name} {v.last_name}"} for v in veterinarios]
         return Response(data)
+
+class CurrentUserView(APIView):
+    """Vista para obtener datos del usuario autenticado incluyendo su rol.
+    
+    Se utiliza en el endpoint /api/me/ después del login para determinar
+    a dónde redireccionar al usuario (Dashboard para Vet, Portal para Tutor).
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Retorna los datos del usuario actual con su rol."""
+        serializer = CurrentUserSerializer(request.user)
+        return Response(serializer.data)
     
 # ============================================================================
 # VISTAS PARA RENDERIZAR TEMPLATES DEL FRONTEND
@@ -259,3 +273,12 @@ def register_view(request):
 def tutores_view(request):
     """Renderiza la página de gestión de tutores."""
     return render(request, 'core/tutores.html')
+
+def portal_view(request):
+    """Renderiza el portal exclusivo para tutores.
+    
+    Este portal permite a los tutores visualizar sus mascotas y próximas citas.
+    Contiene información específica del tutor autenticado.
+    """
+    return render(request, 'core/portal_tutor.html')
+
