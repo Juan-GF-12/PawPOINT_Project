@@ -36,7 +36,7 @@ urlpatterns = [
     path('pacientes/', views.pacientes_view, name='pacientes_view'),
     path('citas/', views.citas_view, name='citas_view'),
     path('historial/', views.historial_view, name='historial_view'),
-    path('registro/', views.registro_tutor_view, name='registro_view'),
+    path('registro/', views.registro_tutor_view, name='register_view'),
     path('tutores/', views.tutores_view, name='tutores_view'),
     path('portal/', views.portal_view, name='portal_view'),
 ]
