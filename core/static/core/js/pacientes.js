@@ -1,32 +1,37 @@
-// core/static/core/js/pacientes.js
+// core/static/core/js/pacientes.js - Versión 2.0 con Formulario Desplegable
+// Última actualización: 2025-11-26
 
-// Variable global para la instancia del Modal de Bootstrap
-let modalBootstrap = null;
 let pacientesData = []; // Almacena todos los pacientes para búsqueda
 let pacienteEditando = null; // ID del paciente que se está editando
 
 // Espera a que el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
     
-    // Inicializa la instancia del Modal
-    const pacienteModalEl = document.getElementById('pacienteModal');
-    modalBootstrap = new bootstrap.Modal(pacienteModalEl);
-    
     // Carga la lista inicial de pacientes
     cargarPacientes();
 
     // 1. Event Listener para el botón "+ Nuevo Paciente"
     document.getElementById('btn-nuevo-paciente').addEventListener('click', function() {
-        abrirModalPaciente();
+        abrirFormulario();
     });
 
-    // 2. Event Listener para el formulario del modal
+    // 2. Event Listener para cerrar el formulario
+    document.getElementById('btn-cerrar-formulario').addEventListener('click', function() {
+        cerrarFormulario();
+    });
+
+    // 3. Event Listener para cancelar el formulario
+    document.getElementById('btn-cancelar-form').addEventListener('click', function() {
+        cerrarFormulario();
+    });
+
+    // 4. Event Listener para el formulario del modal
     document.getElementById('paciente-form').addEventListener('submit', function(event) {
         event.preventDefault(); // Evita envío tradicional
         guardarPaciente();
     });
 
-    // 3. Event Listener para búsqueda en tiempo real
+    // 5. Event Listener para búsqueda en tiempo real
     document.getElementById('search-pacientes').addEventListener('input', function(event) {
         buscarPacientes(event.target.value);
     });
@@ -114,33 +119,66 @@ async function cargarTutores() {
     }
 }
 
-// Abre el modal para nuevo paciente o editar
-function abrirModalPaciente(pacienteId = null) {
+// Abre el formulario desplegable (nuevo o editar)
+function abrirFormulario(pacienteId = null) {
+    const formularioContainer = document.getElementById('formulario-container');
+    const formularioTitulo = document.getElementById('formulario-titulo');
     const form = document.getElementById('paciente-form');
-    const modalTitulo = document.getElementById('modal-titulo');
-    const errorAlert = document.getElementById('modal-alert-error');
+    const errorAlert = document.getElementById('form-alert-error');
     
     // Resetea el formulario
     form.reset();
     errorAlert.classList.add('hidden');
+    limpiarErrores();
     pacienteEditando = pacienteId;
     
     if (pacienteId) {
         // Modo edición
-        modalTitulo.textContent = 'Editar Paciente';
+        formularioTitulo.innerHTML = '<i class="fas fa-edit mr-2"></i>Editar Paciente';
         document.getElementById('paciente-id').value = pacienteId;
         cargarDatosPaciente(pacienteId);
     } else {
         // Modo creación
-        modalTitulo.textContent = 'Nuevo Paciente';
+        formularioTitulo.innerHTML = '<i class="fas fa-paw mr-2"></i>Nuevo Paciente';
         document.getElementById('paciente-id').value = '';
     }
     
     // Carga los tutores frescos cada vez que se abre
     cargarTutores();
     
-    // Muestra el modal
-    modalBootstrap.show();
+    // Anima la apertura del formulario
+    formularioContainer.style.maxHeight = '1000px';
+    formularioContainer.style.opacity = '1';
+    formularioContainer.style.marginBottom = '1.5rem';
+    
+    // Scroll suave al formulario
+    setTimeout(() => {
+        formularioContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+}
+
+// Cierra el formulario desplegable
+function cerrarFormulario() {
+    const formularioContainer = document.getElementById('formulario-container');
+    const form = document.getElementById('paciente-form');
+    
+    // Anima el cierre
+    formularioContainer.style.maxHeight = '0';
+    formularioContainer.style.opacity = '0';
+    formularioContainer.style.marginBottom = '0';
+    
+    // Resetea después de la animación
+    setTimeout(() => {
+        form.reset();
+        limpiarErrores();
+        pacienteEditando = null;
+    }, 300);
+}
+
+// Limpia los mensajes de error del formulario
+function limpiarErrores() {
+    const errorMessages = document.querySelectorAll('.error-message');
+    errorMessages.forEach(msg => msg.classList.add('hidden'));
 }
 
 // Guarda el nuevo paciente (POST) o actualiza uno existente (PUT)
@@ -150,38 +188,50 @@ async function guardarPaciente() {
 
     // 1. Obtener datos del formulario
     const tutorId = document.getElementById('paciente-tutor').value;
-    const nombre = document.getElementById('paciente-nombre').value;
+    const nombre = document.getElementById('paciente-nombre').value.trim();
     const especie = document.getElementById('paciente-especie').value;
-    const raza = document.getElementById('paciente-raza').value;
+    const raza = document.getElementById('paciente-raza').value.trim();
     const genero = document.getElementById('paciente-genero').value;
     const fechaNacimiento = document.getElementById('paciente-fecha-nacimiento').value;
+    const color = document.getElementById('paciente-color').value.trim();
 
-    // 2. Referencias a botones y alertas
-    const errorAlert = document.getElementById('modal-alert-error');
+    // 2. Validación básica
+    if (!tutorId || !nombre || !especie || !genero || !fechaNacimiento) {
+        mostrarError('Por favor completa todos los campos obligatorios (*)');
+        return;
+    }
+
+    // 3. Referencias a botones y alertas
+    const errorAlert = document.getElementById('form-alert-error');
     const btnTexto = document.getElementById('btn-guardar-texto');
     const btnSpinner = document.getElementById('btn-guardar-spinner');
 
-    // 3. Mostrar Spinner
+    // 4. Mostrar Spinner
     errorAlert.classList.add('hidden');
     btnTexto.classList.add('hidden');
     btnSpinner.classList.remove('hidden');
 
     try {
-        // 4. Crear el objeto de datos
+        // 5. Crear el objeto de datos
         const data = {
             tutor: tutorId,
             nombre: nombre,
             especie: especie,
-            raza: raza,
+            raza: raza || '',
             fecha_nacimiento: fechaNacimiento,
             genero: genero
         };
 
-        // 5. Determinar método y URL
+        // Agregar color si existe
+        if (color) {
+            data.color = color;
+        }
+
+        // 6. Determinar método y URL
         const metodo = pacienteId ? 'PUT' : 'POST';
         const url = pacienteId ? `/api/pacientes/${pacienteId}/` : '/api/pacientes/';
 
-        // 6. Enviar a la API
+        // 7. Enviar a la API
         const response = await fetch(url, {
             method: metodo,
             headers: {
@@ -199,19 +249,40 @@ async function guardarPaciente() {
 
         const pacienteGuardado = await response.json();
 
-        // 7. Éxito: Ocultar modal y recargar tabla
-        modalBootstrap.hide();
+        // 8. Éxito: Mostrar notificación y cerrar formulario
+        Swal.fire({
+            title: pacienteId ? '¡Actualizado!' : '¡Guardado!',
+            text: `El paciente ${nombre} ha sido ${pacienteId ? 'actualizado' : 'registrado'} correctamente.`,
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+            background: 'rgba(15, 23, 42, 0.95)',
+            color: '#fff',
+            backdrop: 'rgba(0, 0, 0, 0.7)'
+        });
+
+        cerrarFormulario();
         cargarPacientes(); // Recargar toda la tabla
 
     } catch (error) {
-        // 8. Error: Mostrar alerta
-        errorAlert.textContent = 'Error al guardar. Revisa los campos obligatorios.';
-        errorAlert.classList.remove('hidden');
+        // 9. Error: Mostrar alerta
+        mostrarError('Error al guardar. Verifica los datos e intenta nuevamente.');
     } finally {
-        // 9. Ocultar Spinner
+        // 10. Ocultar Spinner
         btnTexto.classList.remove('hidden');
         btnSpinner.classList.add('hidden');
     }
+}
+
+// Muestra un mensaje de error en el formulario
+function mostrarError(mensaje) {
+    const errorAlert = document.getElementById('form-alert-error');
+    const errorMessage = document.getElementById('error-message');
+    errorMessage.textContent = mensaje;
+    errorAlert.classList.remove('hidden');
+    
+    // Scroll al error
+    errorAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 
@@ -240,9 +311,15 @@ async function cargarDatosPaciente(pacienteId) {
         document.getElementById('paciente-raza').value = paciente.raza || '';
         document.getElementById('paciente-genero').value = paciente.genero;
         document.getElementById('paciente-fecha-nacimiento').value = paciente.fecha_nacimiento;
+        
+        // Cargar color si existe
+        if (paciente.color) {
+            document.getElementById('paciente-color').value = paciente.color;
+        }
 
     } catch (error) {
         console.error('Error cargando paciente:', error);
+        mostrarError('Error al cargar los datos del paciente.');
     }
 }
 
@@ -282,7 +359,27 @@ function buscarPacientes(query) {
 
 // Elimina un paciente
 async function eliminarPaciente(pacienteId, nombrePaciente) {
-    if (!confirm(`¿Estás seguro de eliminar a ${nombrePaciente}? Esta acción no se puede deshacer.`)) {
+    const resultado = await Swal.fire({
+        title: '¿Eliminar paciente?',
+        html: `
+            <p class="text-white/80 mb-4">¿Estás seguro de eliminar a <strong>${nombrePaciente}</strong>?</p>
+            <div class="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-sm text-white/70">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                Esta acción eliminará también todo su historial médico y citas asociadas.
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        background: 'rgba(15, 23, 42, 0.95)',
+        color: '#fff',
+        backdrop: 'rgba(0, 0, 0, 0.7)'
+    });
+
+    if (!resultado.isConfirmed) {
         return;
     }
     
@@ -296,14 +393,44 @@ async function eliminarPaciente(pacienteId, nombrePaciente) {
             }
         });
 
-        if (!response.ok) throw new Error('Error al eliminar paciente');
+        if (!response.ok) {
+            throw new Error('Error al eliminar paciente');
+        }
         
+        // Mostrar éxito
+        Swal.fire({
+            title: '¡Eliminado!',
+            text: `${nombrePaciente} y todos sus registros han sido eliminados.`,
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+            background: 'rgba(15, 23, 42, 0.95)',
+            color: '#fff',
+            backdrop: 'rgba(0, 0, 0, 0.7)'
+        });
+
         // Recargar la tabla
         cargarPacientes();
 
     } catch (error) {
         console.error('Error eliminando paciente:', error);
-        alert('Error al eliminar el paciente. Puede tener registros asociados.');
+        Swal.fire({
+            title: 'Error al Eliminar',
+            html: `
+                <p class="text-white/80 mb-3">No se pudo eliminar el paciente.</p>
+                <p class="text-sm text-white/60">Esto puede deberse a:</p>
+                <ul class="text-left text-sm text-white/60 mt-2 space-y-1">
+                    <li>• Problemas de conexión</li>
+                    <li>• Restricciones de base de datos</li>
+                    <li>• Permisos insuficientes</li>
+                </ul>
+            `,
+            icon: 'error',
+            confirmButtonText: 'Entendido',
+            background: 'rgba(15, 23, 42, 0.95)',
+            color: '#fff',
+            backdrop: 'rgba(0, 0, 0, 0.7)'
+        });
     }
 }
 
@@ -378,23 +505,42 @@ function agregarFilaPaciente(paciente) {
         <td class="p-5 text-white/60">${tutorNombre}</td>
         <td class="p-5">
             <div class="flex justify-center gap-2">
-                <button onclick="window.location.href='/historial/?paciente_id=${paciente.id}'" 
-                        class="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 transition" 
+                <button class="btn-historial px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 transition" 
+                        data-paciente-id="${paciente.id}"
                         title="Ver historial médico">
                     <i class="fas fa-file-medical"></i>
                 </button>
-                <button onclick="abrirModalPaciente(${paciente.id})" 
-                        class="px-3 py-1.5 rounded-lg bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-300 transition" 
+                <button class="btn-editar px-3 py-1.5 rounded-lg bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-300 transition" 
+                        data-paciente-id="${paciente.id}"
                         title="Editar">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button onclick="eliminarPaciente(${paciente.id}, '${paciente.nombre}')" 
-                        class="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-300 transition" 
+                <button class="btn-eliminar px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-300 transition" 
+                        data-paciente-id="${paciente.id}"
+                        data-paciente-nombre="${paciente.nombre}"
                         title="Eliminar">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
         </td>
     `;
+    
+    // Event listeners para los botones
+    row.querySelector('.btn-historial').addEventListener('click', function() {
+        const pacienteId = this.getAttribute('data-paciente-id');
+        window.location.href = `/historial/?paciente_id=${pacienteId}`;
+    });
+    
+    row.querySelector('.btn-editar').addEventListener('click', function() {
+        const pacienteId = this.getAttribute('data-paciente-id');
+        abrirFormulario(parseInt(pacienteId));
+    });
+    
+    row.querySelector('.btn-eliminar').addEventListener('click', function() {
+        const pacienteId = this.getAttribute('data-paciente-id');
+        const nombrePaciente = this.getAttribute('data-paciente-nombre');
+        eliminarPaciente(parseInt(pacienteId), nombrePaciente);
+    });
+    
     tableBody.appendChild(row);
 }
