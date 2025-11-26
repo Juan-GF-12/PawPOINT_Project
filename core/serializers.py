@@ -59,6 +59,7 @@ class TutorSerializer(serializers.ModelSerializer):
 class PacienteSerializer(serializers.ModelSerializer):
     """Serializa los datos de pacientes (mascotas)."""
     tutor_nombre = serializers.SerializerMethodField()
+    tutor_id = serializers.IntegerField(source='tutor.id', read_only=True)
     
     class Meta:
         model = Paciente

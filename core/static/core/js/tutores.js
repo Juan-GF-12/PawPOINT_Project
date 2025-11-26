@@ -22,6 +22,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Formateo automático de RUT
+    document.getElementById('tutor-rut').addEventListener('input', function(e) {
+        formatearRUT(e.target);
+    });
+    
     // Cerrar modal al hacer clic fuera
     document.getElementById('tutorModal').addEventListener('click', function(e) {
         if (e.target.id === 'tutorModal') {
@@ -53,9 +58,34 @@ function getHeaders() {
 // VALIDACIONES
 // ============================================================================
 
+function formatearRUT(input) {
+    let valor = input.value.replace(/[^0-9kK]/g, ''); // Solo números y K
+    
+    if (valor.length === 0) {
+        input.value = '';
+        return;
+    }
+    
+    // Separar cuerpo y dígito verificador
+    let cuerpo = valor.slice(0, -1);
+    let dv = valor.slice(-1).toUpperCase();
+    
+    // Si solo hay un carácter, no formatear aún
+    if (valor.length <= 1) {
+        input.value = valor;
+        return;
+    }
+    
+    // Formatear el cuerpo sin puntos (más simple)
+    // El resultado será: 12345678-9
+    input.value = cuerpo + '-' + dv;
+}
+
 function validarRUT(rut) {
+    if (!rut) return false;
+    
     // Eliminar puntos y guión
-    rut = rut.replace(/\./g, '').replace(/-/g, '');
+    rut = rut.replace(/\./g, '').replace(/-/g, '').replace(/\s/g, '');
     
     if (rut.length < 8 || rut.length > 9) {
         return false;
@@ -63,6 +93,11 @@ function validarRUT(rut) {
     
     const cuerpo = rut.slice(0, -1);
     const dv = rut.slice(-1).toUpperCase();
+    
+    // Validar que el cuerpo sean solo números
+    if (!/^\d+$/.test(cuerpo)) {
+        return false;
+    }
     
     // Calcular dígito verificador
     let suma = 0;
@@ -120,7 +155,7 @@ function validarFormulario() {
         mostrarError('rut', 'El RUT es obligatorio');
         esValido = false;
     } else if (!validarRUT(rut)) {
-        mostrarError('rut', 'RUT inválido. Formato: 12.345.678-9');
+        mostrarError('rut', 'RUT inválido. Verifica el dígito verificador');
         esValido = false;
     }
     
@@ -349,7 +384,7 @@ async function guardarTutor() {
     }
     
     const data = {
-        rut: document.getElementById('tutor-rut').value.trim(),
+        rut: document.getElementById('tutor-rut').value.trim().replace(/\./g, ''), // Eliminar puntos si los hay
         nombre: document.getElementById('tutor-nombre').value.trim(),
         apellido: document.getElementById('tutor-apellido').value.trim(),
         telefono: document.getElementById('tutor-telefono').value.trim(),
@@ -413,7 +448,7 @@ async function guardarTutor() {
 
 async function verPacientesTutor(tutorId, nombreTutor) {
     try {
-        const response = await fetch(`/api/pacientes/?tutor=${tutorId}`, {
+        const response = await fetch('/api/pacientes/', {
             headers: {
                 'Authorization': 'Bearer ' + getAccessToken()
             }
@@ -421,7 +456,12 @@ async function verPacientesTutor(tutorId, nombreTutor) {
         
         if (!response.ok) throw new Error('Error al cargar pacientes');
         
-        const pacientes = await response.json();
+        const todosPacientes = await response.json();
+        
+        // Filtrar pacientes por tutor_id o tutor (dependiendo de cómo venga en el serializer)
+        const pacientes = todosPacientes.filter(p => {
+            return p.tutor === parseInt(tutorId) || p.tutor_id === parseInt(tutorId);
+        });
         
         if (pacientes.length === 0) {
             Swal.fire({
@@ -447,20 +487,21 @@ async function verPacientesTutor(tutorId, nombreTutor) {
         html += '</div>';
         
         Swal.fire({
-            title: `Mascotas de ${nombreTutor}`,
+            title: `🐾 Mascotas de ${nombreTutor}`,
             html: html,
             icon: 'info',
             width: '600px',
             background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
             color: '#fff',
-            confirmButtonColor: '#9333ea'
+            confirmButtonColor: '#9333ea',
+            confirmButtonText: 'Cerrar'
         });
         
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error completo:', error);
         Swal.fire({
             title: 'Error',
-            text: 'No se pudieron cargar los pacientes',
+            text: 'No se pudieron cargar los pacientes. Por favor, intenta nuevamente.',
             icon: 'error',
             background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
             color: '#fff'
@@ -503,29 +544,42 @@ async function eliminarTutor(tutorId) {
             }
         });
         
-        if (!response.ok) throw new Error('Error al eliminar');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'Error al eliminar');
+        }
         
         cerrarModal();
         cargarTutores();
         
         Swal.fire({
             title: '¡Eliminado!',
-            text: 'El tutor y sus datos asociados han sido eliminados',
+            text: 'El tutor y todos sus datos asociados (pacientes, citas, historial) han sido eliminados correctamente',
             icon: 'success',
-            timer: 2000,
+            timer: 3000,
             showConfirmButton: false,
             background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
             color: '#fff'
         });
         
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error completo al eliminar:', error);
         Swal.fire({
-            title: 'Error',
-            text: 'No se pudo eliminar el tutor. Puede tener datos asociados.',
+            title: 'Error al Eliminar',
+            html: `
+                <p class="text-white/80 mb-2">No se pudo eliminar el tutor.</p>
+                <p class="text-sm text-white/60">Esto puede deberse a:</p>
+                <ul class="text-left text-sm text-white/60 mt-2 ml-4">
+                    <li>• Problemas de conexión</li>
+                    <li>• Restricciones de base de datos</li>
+                    <li>• Permisos insuficientes</li>
+                </ul>
+                <p class="text-xs text-white/50 mt-3">Intenta recargar la página y volver a intentarlo</p>
+            `,
             icon: 'error',
             background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
-            color: '#fff'
+            color: '#fff',
+            confirmButtonColor: '#9333ea'
         });
     }
 }
