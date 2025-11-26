@@ -6,6 +6,7 @@
  * - Carga de datos del paciente desde la API
  * - Renderización de fichas clínicas en formato timeline
  * - Creación de nuevas fichas clínicas y tratamientos
+ * - Adaptación de interfaz según el rol del usuario (Tutor vs Veterinario)
  */
 
 // ============================================================================
@@ -13,7 +14,8 @@
 // ============================================================================
 
 let pacienteId = null;
-const modalFicha = new bootstrap.Modal(document.getElementById('modalFicha'));
+let usuarioRol = null; // Almacena el rol del usuario actual
+let modalFicha = null; // Se inicializará solo si existe el modal
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -21,9 +23,9 @@ const modalFicha = new bootstrap.Modal(document.getElementById('modalFicha'));
 
 /**
  * Se ejecuta cuando el DOM está completamente cargado.
- * Obtiene el ID del paciente y carga los datos.
+ * Obtiene el ID del paciente, verifica el rol del usuario y carga los datos.
  */
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Se obtiene el ID del paciente de los parámetros de la URL
     const urlParams = new URLSearchParams(window.location.search);
     pacienteId = urlParams.get('paciente_id');
@@ -34,10 +36,82 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
+    // Inicializar vista según el rol del usuario
+    await inicializarVista();
+    
     // Se cargan los datos del paciente y el historial
     cargarPerfilPaciente();
     cargarTimelineFichas();
 });
+
+// ============================================================================
+// FUNCIONES DE ROL Y ADAPTACIÓN DE INTERFAZ
+// ============================================================================
+
+/**
+ * Inicializa la vista y adapta la interfaz según el rol del usuario.
+ */
+async function inicializarVista() {
+    const token = localStorage.getItem('accessToken');
+    if (!token) { 
+        window.location.href = '/login/'; 
+        return; 
+    }
+
+    // 1. Obtener quién soy
+    const response = await fetch('/api/me/', { 
+        headers: { 'Authorization': 'Bearer ' + token } 
+    });
+    
+    if (!response.ok) {
+        window.location.href = '/login/';
+        return;
+    }
+    
+    const user = await response.json();
+    usuarioRol = user.rol;
+
+    // 2. Lógica de Adaptación Visual
+    if (user.rol === 'Tutor') {
+        aplicarModoTutor();
+    } else {
+        // Inicializar modal solo para veterinarios
+        const modalElement = document.getElementById('modalFicha');
+        if (modalElement) {
+            modalFicha = new bootstrap.Modal(modalElement);
+        }
+    }
+    // Si es Veterinario/Asistente/Administrador, mantener vista por defecto
+}
+
+/**
+ * Aplica ajustes visuales para el modo Tutor (solo lectura).
+ */
+function aplicarModoTutor() {
+    // A. ELIMINAR/OCULTAR Sidebar
+    const sidebar = document.getElementById('sidebar-wrapper');
+    if (sidebar) {
+        sidebar.style.display = 'none'; // Ocultar completamente
+    }
+
+    // B. EXPANDIR Contenido Principal
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+        // Quitar flex-1 y ocupar todo el ancho
+        mainContent.style.width = '100%';
+        mainContent.style.maxWidth = '100%';
+    }
+
+    // C. MOSTRAR Controles de Tutor
+    const tutorControls = document.getElementById('tutor-controls');
+    if (tutorControls) {
+        tutorControls.classList.remove('d-none');
+    }
+    
+    // Nota: El botón de Nueva Ficha y el modal ya no se renderizan en el HTML
+    // para tutores, por lo que no es necesario ocultarlos aquí.
+    // Los botones de edición en las tarjetas se ocultarán durante el renderizado.
+}
 
 // ============================================================================
 // FUNCIONES DE AUTENTICACIÓN
@@ -182,6 +256,18 @@ function renderizarTarjetaFicha(ficha, container) {
         `;
     }
     
+    // Botones de acción (solo para veterinarios)
+    let botonesAccion = '';
+    if (usuarioRol !== 'Tutor') {
+        botonesAccion = `
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" title="Ver detalles">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+        `;
+    }
+    
     tarjeta.innerHTML = `
         <div class="card-body">
             <!-- Header de la tarjeta -->
@@ -190,11 +276,7 @@ function renderizarTarjetaFicha(ficha, container) {
                     <div class="timeline-date"><i class="fas fa-calendar me-2"></i>${fechaFormato}</div>
                     <div class="timeline-vet"><strong>Veterinario:</strong> ${ficha.veterinario_nombre || 'Sin especificar'}</div>
                 </div>
-                <div>
-                    <button class="btn btn-sm btn-outline-secondary" title="Ver detalles">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </div>
+                ${botonesAccion}
             </div>
             
             <!-- Motivo de consulta -->

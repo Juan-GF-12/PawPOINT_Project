@@ -6,6 +6,8 @@
  * - Autenticación JWT
  * - Validación de solapamientos
  * - Gestión CRUD de citas
+ * - Filtros por estado y veterinario
+ * - Vista alternativa de lista
  */
 
 // ============================================================================
@@ -13,7 +15,9 @@
 // ============================================================================
 let calendar = null;
 let citaActualId = null;
-const modal = new bootstrap.Modal(document.getElementById('modalCita'));
+let todasLasCitas = []; // Almacena todas las citas para filtrado
+let filtroEstado = '';
+let filtroVeterinario = '';
 
 // ============================================================================
 // FUNCIONES DE AUTENTICACIÓN
@@ -108,14 +112,28 @@ function cargarCitasDelAPI(successCallback, failureCallback) {
     })
     .then(response => response.json())
     .then(data => {
-        const eventos = data.map(cita => {
+        todasLasCitas = data; // Guardar todas las citas para filtrado
+        console.log('Citas cargadas:', data.length); // Debug
+        const citasFiltradas = aplicarFiltros(data);
+        
+        const eventos = citasFiltradas.map(cita => {
             return {
                 id: cita.id,
                 title: `${cita.paciente_nombre || 'Paciente'} - ${cita.veterinario_nombre || 'Vet.'}`,
                 start: cita.fecha_hora,
-                className: `estado-${cita.estado.toLowerCase()}`
+                className: `estado-${cita.estado.toLowerCase()}`,
+                extendedProps: {
+                    veterinario: cita.veterinario,
+                    paciente: cita.paciente,
+                    motivo: cita.motivo,
+                    estado: cita.estado
+                }
             };
         });
+        
+        // Actualizar la tabla también
+        renderizarTablaCitas();
+        
         successCallback(eventos);
     })
     .catch(error => {
@@ -125,8 +143,45 @@ function cargarCitasDelAPI(successCallback, failureCallback) {
 }
 
 /**
- * Carga los veterinarios disponibles en el select del modal.
- * Se obtiene del endpoint /api/tutores/
+ * Aplica filtros de estado, veterinario, paciente y tutor a las citas
+ */
+function aplicarFiltros(citas) {
+    if (!Array.isArray(citas)) {
+        return [];
+    }
+    
+    let citasFiltradas = citas;
+    
+    if (filtroEstado) {
+        citasFiltradas = citasFiltradas.filter(cita => cita.estado === filtroEstado);
+    }
+    
+    if (filtroVeterinario) {
+        citasFiltradas = citasFiltradas.filter(cita => cita.veterinario == filtroVeterinario);
+    }
+    
+    // Filtro por búsqueda de paciente
+    const filtroPaciente = document.getElementById('filtro-paciente')?.value?.toLowerCase();
+    if (filtroPaciente) {
+        citasFiltradas = citasFiltradas.filter(cita => 
+            (cita.paciente_nombre || '').toLowerCase().includes(filtroPaciente)
+        );
+    }
+    
+    // Filtro por búsqueda de tutor
+    const filtroTutor = document.getElementById('filtro-tutor')?.value?.toLowerCase();
+    if (filtroTutor) {
+        citasFiltradas = citasFiltradas.filter(cita => 
+            (cita.tutor_nombre || '').toLowerCase().includes(filtroTutor)
+        );
+    }
+    
+    return citasFiltradas;
+}
+
+/**
+ * Carga los veterinarios disponibles en el select del modal y filtro.
+ * Se obtiene del endpoint /api/veterinarios/
  */
 function cargarVeterinarios() {
     fetch('/api/veterinarios/', {
@@ -134,14 +189,26 @@ function cargarVeterinarios() {
     })
     .then(response => response.json())
     .then(data => {
-        const select = document.getElementById('cita-veterinario');
-        select.innerHTML = '<option value="">Seleccionar veterinario...</option>';
+        // Select del modal
+        const selectModal = document.getElementById('cita-veterinario');
+        selectModal.innerHTML = '<option value="">Seleccionar veterinario...</option>';
+        
+        // Select del filtro
+        const selectFiltro = document.getElementById('filtro-veterinario');
+        selectFiltro.innerHTML = '<option value="">Todos los veterinarios</option>';
         
         data.forEach(vet => {
-            const option = document.createElement('option');
-            option.value = vet.id;
-            option.textContent = vet.nombre || vet.email;
-            select.appendChild(option);
+            // Modal
+            const optionModal = document.createElement('option');
+            optionModal.value = vet.id;
+            optionModal.textContent = vet.nombre || vet.email;
+            selectModal.appendChild(optionModal);
+            
+            // Filtro
+            const optionFiltro = document.createElement('option');
+            optionFiltro.value = vet.id;
+            optionFiltro.textContent = vet.nombre || vet.email;
+            selectFiltro.appendChild(optionFiltro);
         });
     })
     .catch(error => console.error('Error cargando veterinarios:', error));
@@ -171,20 +238,16 @@ function cargarPacientes() {
 }
 
 // ============================================================================
-// GESTIÓN DEL MODAL
+// GESTIÓN DEL FORMULARIO DE CITAS
 // ============================================================================
 
 /**
- * Abre el modal para crear una nueva cita.
- * Si se pasa una fecha, se pre-llena el campo de fecha/hora.
- *
- * @param {string} fechaSeleccionada - Fecha en formato ISO (opcional)
+ * Abre el formulario para crear una nueva cita (en acordeón)
  */
 function abrirModalNuevaCita(fechaSeleccionada = null) {
     citaActualId = null;
-    document.getElementById('modalTitulo').textContent = 'Nueva Cita';
-    document.getElementById('btnEliminar').classList.add('d-none');
-    document.getElementById('modal-error').classList.add('d-none');
+    document.getElementById('btnEliminar').classList.add('hidden');
+    document.getElementById('modal-error').classList.add('hidden');
     document.getElementById('formCita').reset();
     
     // Pre-llenar fecha si se hizo click en el calendario
@@ -192,14 +255,18 @@ function abrirModalNuevaCita(fechaSeleccionada = null) {
         document.getElementById('cita-fecha').value = fechaSeleccionada;
     }
     
-    modal.show();
+    // Abrir acordeón de nueva cita
+    const content = document.getElementById('content-nueva-cita');
+    const icon = document.getElementById('icon-nueva-cita');
+    
+    if (!content.classList.contains('active')) {
+        content.classList.add('active');
+        icon.classList.add('rotate-180');
+    }
 }
 
 /**
- * Abre el modal para editar una cita existente.
- * Carga los datos de la cita y los inyecta en el formulario.
- *
- * @param {number} citaId - Identificador único de la cita
+ * Abre el formulario para editar una cita existente
  */
 function abrirModalEditarCita(citaId) {
     citaActualId = citaId;
@@ -209,23 +276,48 @@ function abrirModalEditarCita(citaId) {
     })
     .then(response => response.json())
     .then(cita => {
-        document.getElementById('modalTitulo').textContent = 'Detalle de Cita';
-        document.getElementById('btnEliminar').classList.remove('d-none');
-        document.getElementById('modal-error').classList.add('d-none');
+        document.getElementById('btnEliminar').classList.remove('hidden');
+        document.getElementById('modal-error').classList.add('hidden');
         
-        // Se llenan los campos del formulario con datos de la cita
+        // Llenar campos del formulario
         document.getElementById('cita-veterinario').value = cita.veterinario || '';
         document.getElementById('cita-paciente').value = cita.paciente || '';
         document.getElementById('cita-fecha').value = cita.fecha_hora.replace('Z', '').slice(0, 16);
         document.getElementById('cita-motivo').value = cita.motivo || '';
         document.getElementById('cita-estado').value = cita.estado;
         
-        modal.show();
+        // Abrir acordeón de nueva cita (que ahora es para editar)
+        const content = document.getElementById('content-nueva-cita');
+        const icon = document.getElementById('icon-nueva-cita');
+        
+        if (!content.classList.contains('active')) {
+            content.classList.add('active');
+            icon.classList.add('rotate-180');
+        }
+        
+        // Scroll suave al formulario
+        document.getElementById('content-nueva-cita').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     })
     .catch(error => {
         console.error('Error cargando cita:', error);
         mostrarError('Error al cargar la cita');
     });
+}
+
+/**
+ * Cancela y cierra el formulario
+ */
+function cancelarFormulario() {
+    citaActualId = null;
+    document.getElementById('formCita').reset();
+    document.getElementById('btnEliminar').classList.add('hidden');
+    document.getElementById('modal-error').classList.add('hidden');
+    
+    // Cerrar acordeón
+    const content = document.getElementById('content-nueva-cita');
+    const icon = document.getElementById('icon-nueva-cita');
+    content.classList.remove('active');
+    icon.classList.remove('rotate-180');
 }
 
 // ============================================================================
@@ -236,9 +328,9 @@ function abrirModalEditarCita(citaId) {
  * Guarda una cita (crear o actualizar).
  * 
  * Si el servidor retorna error 400, se captura el mensaje de validación
- * y se muestra en el modal sin cerrarlo (para que el usuario pueda corregir).
+ * y se muestra en el formulario sin cerrarlo.
  * 
- * En caso de éxito, se actualiza el calendario y se cierra el modal.
+ * En caso de éxito, se actualiza el calendario y se cierra el formulario.
  */
 function guardarCita() {
     const formData = {
@@ -249,8 +341,19 @@ function guardarCita() {
         estado: document.getElementById('cita-estado').value
     };
     
+    // Validar campos requeridos
+    if (!formData.veterinario || !formData.paciente || !formData.fecha_hora) {
+        mostrarError('Por favor completa todos los campos obligatorios');
+        return;
+    }
+    
     // Se convierte la fecha a formato ISO compatible con Django
-    formData.fecha_hora = new Date(formData.fecha_hora).toISOString();
+    const fechaDate = new Date(formData.fecha_hora);
+    if (isNaN(fechaDate.getTime())) {
+        mostrarError('La fecha ingresada no es válida');
+        return;
+    }
+    formData.fecha_hora = fechaDate.toISOString();
     
     // Se determina si es crear (POST) o actualizar (PUT)
     const url = citaActualId ? `/api/citas/${citaActualId}/` : '/api/citas/';
@@ -263,11 +366,11 @@ function guardarCita() {
     })
     .then(response => {
         if (response.ok) {
-            modal.hide();
+            cancelarFormulario(); // Cerrar acordeón y limpiar
             calendar.refetchEvents();
             mostrarExito('Cita guardada correctamente');
         } else if (response.status === 400) {
-            // Se captura el error de validación y se muestra en el modal
+            // Se captura el error de validación y se muestra en el formulario
             return response.json().then(data => {
                 mostrarErrorModal(data);
             });
@@ -282,30 +385,68 @@ function guardarCita() {
 }
 
 /**
- * Elimina una cita con confirmación del usuario.
+ * Elimina una cita con confirmación del usuario usando SweetAlert2.
  * Envía petición DELETE a la API y actualiza el calendario.
  */
 function eliminarCita() {
-    if (!citaActualId || !confirm('¿Estás seguro de que deseas eliminar esta cita?')) {
+    if (!citaActualId) {
         return;
     }
     
-    fetch(`/api/citas/${citaActualId}/`, {
-        method: 'DELETE',
-        headers: getHeaders()
-    })
-    .then(response => {
-        if (response.ok) {
-            modal.hide();
-            calendar.refetchEvents();
-            mostrarExito('Cita eliminada correctamente');
-        } else {
-            mostrarError('Error al eliminar la cita');
+    Swal.fire({
+        title: '¿Eliminar esta cita?',
+        text: "Esta acción no se puede deshacer",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+        color: '#fff',
+        customClass: {
+            popup: 'rounded-2xl border border-white/10'
         }
-    })
-    .catch(error => {
-        console.error('Error eliminando cita:', error);
-        mostrarError('Error al eliminar la cita');
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/api/citas/${citaActualId}/`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            })
+            .then(response => {
+                if (response.ok) {
+                    cancelarFormulario();
+                    calendar.refetchEvents();
+                    Swal.fire({
+                        title: '¡Eliminada!',
+                        text: 'La cita ha sido eliminada correctamente',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+                        color: '#fff'
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'No se pudo eliminar la cita',
+                        icon: 'error',
+                        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+                        color: '#fff'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error eliminando cita:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Error al eliminar la cita',
+                    icon: 'error',
+                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+                    color: '#fff'
+                });
+            });
+        }
     });
 }
 
@@ -337,39 +478,41 @@ function mostrarErrorModal(data) {
 }
 
 /**
- * Muestra un mensaje de error temporal fuera del modal.
- * La alerta desaparece automáticamente después de 5 segundos.
- *
+ * Muestra un mensaje de error con SweetAlert2
  * @param {string} mensaje - Texto del mensaje de error
  */
 function mostrarError(mensaje) {
-    const alerta = document.createElement('div');
-    alerta.className = 'alert alert-danger alert-dismissible fade show';
-    alerta.innerHTML = `
-        ${mensaje}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.querySelector('.main-content').insertBefore(alerta, document.querySelector('.card'));
-    
-    setTimeout(() => alerta.remove(), 5000);
+    Swal.fire({
+        title: 'Error',
+        text: mensaje,
+        icon: 'error',
+        timer: 3000,
+        showConfirmButton: false,
+        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+        color: '#fff',
+        customClass: {
+            popup: 'rounded-2xl border border-white/10'
+        }
+    });
 }
 
 /**
- * Muestra un mensaje de éxito temporal.
- * La alerta desaparece automáticamente después de 5 segundos.
- *
+ * Muestra un mensaje de éxito con SweetAlert2
  * @param {string} mensaje - Texto del mensaje de éxito
  */
 function mostrarExito(mensaje) {
-    const alerta = document.createElement('div');
-    alerta.className = 'alert alert-success alert-dismissible fade show';
-    alerta.innerHTML = `
-        ${mensaje}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.querySelector('.main-content').insertBefore(alerta, document.querySelector('.card'));
-    
-    setTimeout(() => alerta.remove(), 5000);
+    Swal.fire({
+        title: '¡Éxito!',
+        text: mensaje,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)',
+        color: '#fff',
+        customClass: {
+            popup: 'rounded-2xl border border-white/10'
+        }
+    });
 }
 
 // ============================================================================
@@ -384,4 +527,178 @@ document.addEventListener('DOMContentLoaded', function() {
     inicializarCalendario();
     cargarVeterinarios();
     cargarPacientes();
+    
+    // Pre-cargar citas para que la lista funcione inmediatamente
+    fetch('/api/citas/', {
+        headers: getHeaders()
+    })
+    .then(response => response.json())
+    .then(data => {
+        todasLasCitas = data;
+        renderizarTablaCitas(); // Renderizar lista inicial
+    })
+    .catch(error => console.error('Error pre-cargando citas:', error));
+    
+    // Event Listeners para filtros
+    document.getElementById('filtro-estado').addEventListener('change', function(e) {
+        filtroEstado = e.target.value;
+        if (calendar) {
+            calendar.refetchEvents();
+        }
+        renderizarTablaCitas();
+    });
+    
+    document.getElementById('filtro-veterinario').addEventListener('change', function(e) {
+        filtroVeterinario = e.target.value;
+        if (calendar) {
+            calendar.refetchEvents();
+        }
+        renderizarTablaCitas();
+    });
+    
+    // Event Listeners para búsqueda de paciente
+    document.getElementById('filtro-paciente').addEventListener('input', function(e) {
+        if (calendar) {
+            calendar.refetchEvents();
+        }
+        renderizarTablaCitas();
+    });
+    
+    // Event Listeners para búsqueda de tutor
+    document.getElementById('filtro-tutor').addEventListener('input', function(e) {
+        if (calendar) {
+            calendar.refetchEvents();
+        }
+        renderizarTablaCitas();
+    });
 });
+
+// ============================================================================
+// FUNCIONES DE ACORDEÓN
+// ============================================================================
+
+/**
+ * Toggle para mostrar/ocultar secciones de acordeón
+ */
+function toggleAccordion(section) {
+    const content = document.getElementById(`content-${section}`);
+    const icon = document.getElementById(`icon-${section}`);
+    
+    content.classList.toggle('active');
+    icon.classList.toggle('rotate-180');
+    
+    // Si se abre el calendario, ajustar su tamaño
+    if (section === 'calendario' && content.classList.contains('active') && calendar) {
+        setTimeout(() => {
+            calendar.updateSize();
+        }, 400);
+    }
+}
+
+/**
+ * Renderiza las citas en la tabla
+ */
+function renderizarTablaCitas() {
+    const tbody = document.getElementById('tabla-citas-body');
+    const citasFiltradas = aplicarFiltros(todasLasCitas);
+    
+    tbody.innerHTML = '';
+    
+    if (citasFiltradas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-white/60">No hay citas que coincidan con los filtros.</td></tr>';
+        return;
+    }
+    
+    // Ordenar por fecha
+    citasFiltradas.sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora));
+    
+    citasFiltradas.forEach(cita => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-white/5 transition';
+        
+        const fecha = new Date(cita.fecha_hora);
+        const fechaFormateada = fecha.toLocaleDateString('es-CL', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric' 
+        });
+        const horaFormateada = fecha.toLocaleTimeString('es-CL', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        const estadoClases = {
+            'CONFIRMADA': 'bg-green-500/20 text-green-300 border border-green-500/50',
+            'PENDIENTE': 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/50',
+            'CANCELADA': 'bg-red-500/20 text-red-300 border border-red-500/50',
+            'COMPLETADA': 'bg-blue-500/20 text-blue-300 border border-blue-500/50'
+        };
+        
+        row.innerHTML = `
+            <td class="p-4">
+                <div class="text-white/80 font-semibold">${fechaFormateada}</div>
+                <div class="text-white/60 text-xs">${horaFormateada}</div>
+            </td>
+            <td class="p-4 text-white/80">${cita.paciente_nombre || 'N/A'}</td>
+            <td class="p-4 text-white/60">${cita.tutor_nombre || 'N/A'}</td>
+            <td class="p-4 text-white/60">${cita.veterinario_nombre || 'N/A'}</td>
+            <td class="p-4 text-white/60 max-w-xs truncate">${cita.motivo || '-'}</td>
+            <td class="p-4">
+                <span class="px-2 py-1 rounded-lg text-xs font-semibold ${estadoClases[cita.estado] || ''}">${cita.estado}</span>
+            </td>
+            <td class="p-4">
+                <div class="flex justify-center gap-2">
+                    <button onclick="abrirModalEditarCita(${cita.id})" 
+                            class="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 transition" 
+                            title="Ver detalle">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button onclick="cambiarEstadoCita(${cita.id}, 'CONFIRMADA')" 
+                            class="px-3 py-1.5 rounded-lg bg-green-600/20 hover:bg-green-600/40 text-green-300 transition" 
+                            title="Confirmar">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button onclick="cambiarEstadoCita(${cita.id}, 'CANCELADA')" 
+                            class="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-300 transition" 
+                            title="Marcar como Cancelada">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+/**
+ * Cambia rápidamente el estado de una cita
+ */
+function cambiarEstadoCita(citaId, nuevoEstado) {
+    fetch(`/api/citas/${citaId}/`, {
+        headers: getHeaders()
+    })
+    .then(response => response.json())
+    .then(cita => {
+        cita.estado = nuevoEstado;
+        
+        return fetch(`/api/citas/${citaId}/`, {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(cita)
+        });
+    })
+    .then(response => {
+        if (response.ok) {
+            if (calendar) {
+                calendar.refetchEvents();
+            }
+            renderizarTablaCitas();
+            mostrarExito(`Cita ${nuevoEstado.toLowerCase()} correctamente`);
+        }
+    })
+    .catch(error => {
+        console.error('Error cambiando estado:', error);
+        mostrarError('Error al cambiar el estado de la cita');
+    });
+}

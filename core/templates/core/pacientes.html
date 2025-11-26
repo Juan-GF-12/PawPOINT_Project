@@ -12,7 +12,7 @@
         <!-- Buscador -->
         <div class="relative w-full sm:w-96">
             <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50"></i>
-            <input type="text" placeholder="Buscar por nombre, raza o tutor..." 
+            <input type="text" id="search-pacientes" placeholder="Buscar por nombre, especie o tutor..." 
                    class="w-full pl-12 pr-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition shadow-lg">
         </div>
 
@@ -31,7 +31,10 @@
                     <tr>
                         <th class="p-5 font-semibold">ID</th>
                         <th class="p-5 font-semibold">Paciente</th>
-                        <th class="p-5 font-semibold">Especie/Raza</th>
+                        <th class="p-5 font-semibold">Especie</th>
+                        <th class="p-5 font-semibold">Raza</th>
+                        <th class="p-5 font-semibold">Género</th>
+                        <th class="p-5 font-semibold">Edad</th>
                         <th class="p-5 font-semibold">Tutor</th>
                         <th class="p-5 font-semibold text-center">Acciones</th>
                     </tr>
@@ -39,7 +42,7 @@
                 <tbody id="pacientes-table-body" class="divide-y divide-white/10 text-sm">
                     <!-- Fila de carga (se reemplaza por JS) -->
                     <tr id="loading-row">
-                        <td colspan="5" class="p-8 text-center text-white/60">
+                        <td colspan="8" class="p-8 text-center text-white/60">
                             <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
                             <p>Cargando pacientes...</p>
                         </td>
@@ -55,7 +58,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content glass-panel border-0 text-white">
             <div class="modal-header border-b border-white/10">
-                <h5 class="modal-title font-bold text-xl">Nuevo Paciente</h5>
+                <h5 id="modal-titulo" class="modal-title font-bold text-xl">Nuevo Paciente</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-6">
@@ -65,6 +68,7 @@
                 </div>
                 
                 <form id="paciente-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="paciente-id" value="">
                     <div class="col-span-2">
                         <label class="block text-sm font-medium text-white/70 mb-1">Tutor (*)</label>
                         <select id="paciente-tutor" class="w-full p-2.5 rounded-lg glass-input focus:ring-blue-500 focus:border-blue-500" required>

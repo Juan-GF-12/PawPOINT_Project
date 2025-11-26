@@ -32,6 +32,13 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+# Authentication backends - permite login con email o username
+AUTHENTICATION_BACKENDS = [
+    'core.authentication.EmailBackend',  # Backend personalizado para email
+    'django.contrib.auth.backends.ModelBackend',  # Backend por defecto
+]
+
+
 # Application definition
 
 INSTALLED_APPS = [

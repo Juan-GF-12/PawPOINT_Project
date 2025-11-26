@@ -140,3 +140,47 @@ section img {
     border-radius: 0.75rem;
     box-shadow: 0 8px 20px rgba(0,0,0,0.1);
 }
+
+/* --- Estilos Historial Médico (Timeline) --- */
+.timeline-container {
+    position: relative;
+    padding-left: 2rem;
+    border-left: 3px solid #e9ecef; /* Línea vertical */
+    margin-left: 1rem;
+}
+
+.timeline-card {
+    position: relative;
+    margin-bottom: 2rem;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05); /* Sombra moderna suave */
+    transition: transform 0.2s ease;
+}
+
+.timeline-card:hover {
+    transform: translateY(-3px); /* Efecto flotante al pasar mouse */
+}
+
+/* El punto (dot) en la línea de tiempo */
+.timeline-card::before {
+    content: '';
+    position: absolute;
+    left: -2.6rem; /* Ajustar según padding del container */
+    top: 1.5rem;
+    width: 16px;
+    height: 16px;
+    background: #0061ff; /* Color primario */
+    border: 3px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(0, 97, 255, 0.2);
+}
+
+.timeline-date {
+    font-weight: 700;
+    color: #0061ff;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}

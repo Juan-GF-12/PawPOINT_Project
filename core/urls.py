@@ -16,4 +16,5 @@ urlpatterns = [
     # --- ENDPOINTS DE API ADICIONALES ---
     path('api/register/', views.RegisterView.as_view(), name='api_register'),
     path('api/veterinarios/', views.VeterinarioListView.as_view(), name='veterinario_list'),
+    path('api/enviar-recordatorios/', views.enviar_recordatorios, name='enviar_recordatorios'),
 ]

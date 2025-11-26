@@ -58,15 +58,49 @@ class TutorSerializer(serializers.ModelSerializer):
 
 class PacienteSerializer(serializers.ModelSerializer):
     """Serializa los datos de pacientes (mascotas)."""
+    tutor_nombre = serializers.SerializerMethodField()
+    
     class Meta:
         model = Paciente
         fields = '__all__'
+    
+    def get_tutor_nombre(self, obj):
+        """Obtiene el nombre completo del tutor."""
+        try:
+            return f"{obj.tutor.nombre} {obj.tutor.apellido}"
+        except:
+            return None
 
 class CitaSerializer(serializers.ModelSerializer):
     """Serializa citas con validación de solapamientos."""
+    paciente_nombre = serializers.SerializerMethodField()
+    veterinario_nombre = serializers.SerializerMethodField()
+    tutor_nombre = serializers.SerializerMethodField()
+    
     class Meta:
         model = Cita
         fields = '__all__'
+    
+    def get_paciente_nombre(self, obj):
+        """Obtiene el nombre del paciente."""
+        try:
+            return obj.paciente.nombre
+        except:
+            return None
+    
+    def get_veterinario_nombre(self, obj):
+        """Obtiene el nombre del veterinario."""
+        try:
+            return f"{obj.veterinario.first_name} {obj.veterinario.last_name}".strip() or obj.veterinario.username
+        except:
+            return None
+    
+    def get_tutor_nombre(self, obj):
+        """Obtiene el nombre del tutor del paciente."""
+        try:
+            return f"{obj.paciente.tutor.nombre} {obj.paciente.tutor.apellido}"
+        except:
+            return None
     
     def validate(self, data):
         """Valida que no existan citas superpuestas.
@@ -153,10 +187,12 @@ class RegistroTutorSerializer(serializers.Serializer):
     2. Perfil con rol 'Tutor'
     3. Registro en modelo Tutor
     """
-    nombre = serializers.CharField(max_length=100)
-    apellido = serializers.CharField(max_length=100)
+    nombre = serializers.CharField(max_length=100, min_length=2)
+    apellido = serializers.CharField(max_length=100, min_length=2)
     email = serializers.EmailField()
-    rut = serializers.CharField(max_length=20)
+    username = serializers.CharField(max_length=30, min_length=3, required=False)
+    rut = serializers.CharField(max_length=12, min_length=9)
+    telefono = serializers.CharField(max_length=15, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=6)
     
     def validate_email(self, value):
@@ -165,10 +201,22 @@ class RegistroTutorSerializer(serializers.Serializer):
             raise serializers.ValidationError("Este email ya está registrado.")
         return value
     
+    def validate_username(self, value):
+        """Valida que el username no exista si se proporciona."""
+        if value and User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Este nombre de usuario ya está en uso.")
+        return value
+    
     def validate_rut(self, value):
         """Valida que el RUT no exista en la base de datos."""
         if Tutor.objects.filter(rut=value).exists():
             raise serializers.ValidationError("Este RUT ya está registrado.")
+        
+        # Validar formato RUT chileno
+        import re
+        if not re.match(r'^[0-9]{7,8}-[0-9kK]{1}$', value):
+            raise serializers.ValidationError("El RUT debe tener formato 12345678-9")
+        
         return value
     
     def create(self, validated_data):
@@ -181,13 +229,16 @@ class RegistroTutorSerializer(serializers.Serializer):
         email = validated_data['email']
         password = validated_data['password']
         rut = validated_data['rut']
+        telefono = validated_data.get('telefono', '')
         
-        # Generar username a partir del email
-        username = email.split('@')[0]
-        counter = 1
-        while User.objects.filter(username=username).exists():
-            username = f"{email.split('@')[0]}{counter}"
-            counter += 1
+        # Usar username proporcionado o generar desde email
+        username = validated_data.get('username')
+        if not username:
+            username = email.split('@')[0]
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{email.split('@')[0]}{counter}"
+                counter += 1
         
         # Crear usuario
         user = User.objects.create_user(
@@ -204,13 +255,13 @@ class RegistroTutorSerializer(serializers.Serializer):
         # Crear perfil con rol
         UserProfile.objects.create(user=user, rol=rol_tutor)
         
-        # Crear registro Tutor (sin relación a User)
+        # Crear registro Tutor
         tutor = Tutor.objects.create(
             email=email,
             nombre=nombre,
             apellido=apellido,
             rut=rut,
-            telefono=''  # Campo vacío por ahora
+            telefono=telefono
         )
         
         return tutor

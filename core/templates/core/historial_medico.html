@@ -5,6 +5,13 @@
 {% block header_title %}Historial Médico{% endblock %}
 
 {% block content %}
+<!-- Controles para Tutores (Ocultos por defecto) -->
+<div id="tutor-controls" class="d-none mb-4">
+    <a href="/portal/" class="btn btn-link text-decoration-none text-secondary fw-bold">
+        <i class="fas fa-arrow-left me-2"></i> Volver a mis Mascotas
+    </a>
+</div>
+
 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
 
     <!-- Tarjeta de Paciente (Sticky) -->
@@ -29,15 +36,18 @@
                 </div>
             </div>
 
-            <button onclick="abrirModalFicha()" class="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg font-bold transition transform hover:scale-[1.02]">
+            {% if not es_tutor %}
+            <button id="btn-nueva-ficha" onclick="abrirModalFicha()" class="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 shadow-lg font-bold transition transform hover:scale-[1.02]">
                 <i class="fas fa-file-medical mr-2"></i> Nueva Consulta
             </button>
+            {% endif %}
         </div>
     </div>
 
     <!-- Timeline -->
     <div class="lg:col-span-3">
-        <div id="timeline-container" class="space-y-6 pb-10">
+        <h4 class="mb-4 ps-4 border-start border-primary border-4 text-white font-bold">Historial Clínico</h4>
+        <div id="timeline-container" class="timeline-container">
             <!-- Los items del timeline se inyectan aquí por JS -->
             <div class="text-center py-10 text-white/50">
                 <i class="fas fa-spinner fa-spin text-2xl"></i>
@@ -46,7 +56,8 @@
     </div>
 </div>
 
-<!-- Modal Nueva Ficha -->
+{% if not es_tutor %}
+<!-- Modal Nueva Ficha (Solo para Veterinarios) -->
 <div class="modal fade" id="modalFicha" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content glass-panel border-0 text-white">
@@ -115,6 +126,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

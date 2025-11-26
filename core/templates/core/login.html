@@ -60,11 +60,12 @@
         </div>
 
         <form id="login-form">
-            <!-- Campo Usuario -->
+            <!-- Campo Email o Usuario -->
             <div class="mb-5">
-                <label for="username" class="block text-sm font-medium text-white mb-1 opacity-80">Usuario</label>
-                <input type="text" id="username" placeholder="Ingresa tu usuario" required
+                <label for="username" class="block text-sm font-medium text-white mb-1 opacity-80">Email o Usuario</label>
+                <input type="text" id="username" placeholder="ejemplo@correo.com" required
                     class="glass-input w-full px-4 py-2 rounded-lg transition duration-200">
+                <p class="text-xs text-white opacity-60 mt-1">Puedes usar tu email o nombre de usuario</p>
             </div>
             
             <!-- Campo Contraseña -->
@@ -132,8 +133,33 @@
                     localStorage.setItem('accessToken', data.access);
                     localStorage.setItem('refreshToken', data.refresh);
                     
-                    // Redirigir al Dashboard
-                    window.location.href = "{% url 'dashboard_view' %}";
+                    // 5. Obtener datos del usuario para verificar su rol
+                    const meResponse = await fetch('/api/me/', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${data.access}`
+                        }
+                    });
+
+                    if (meResponse.ok) {
+                        const userData = await meResponse.json();
+                        console.log('Usuario:', userData);
+                        console.log('Rol:', userData.rol);
+                        
+                        // 6. Redireccionar según el rol
+                        if (userData.rol === 'Tutor') {
+                            console.log('Redirigiendo a portal (tutor)');
+                            window.location.href = '/portal/';
+                        } else if (userData.rol === 'Veterinario' || userData.rol === 'Asistente' || userData.rol === 'Administrador') {
+                            console.log('Redirigiendo a dashboard (staff)');
+                            window.location.href = '/dashboard/';
+                        } else {
+                            throw new Error('Usuario sin rol válido');
+                        }
+                    } else {
+                        throw new Error('No se pudo obtener información del usuario');
+                    }
                 } else {
                     // 5. ERROR: Credenciales inválidas
                     alertBox.textContent = "Usuario o contraseña incorrectos";

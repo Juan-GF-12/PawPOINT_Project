@@ -54,16 +54,23 @@ document.getElementById('login-form').addEventListener('submit', async function(
         }
 
         const userData = await meResponse.json();
+        
+        // DEBUG: Verificar datos del usuario
+        console.log('Usuario obtenido de /api/me/:', userData);
+        console.log('Rol del usuario:', userData.rol);
 
         // 7. NUEVO: Redireccionar según el rol del usuario
         if (userData.rol === 'Veterinario' || userData.rol === 'Asistente' || userData.rol === 'Administrador') {
             // Usuarios de staff van al dashboard
+            console.log('Redirigiendo a dashboard (staff)');
             window.location.href = '/dashboard/';
         } else if (userData.rol === 'Tutor') {
             // Tutores van al portal exclusivo
+            console.log('Redirigiendo a portal (tutor)');
             window.location.href = '/portal/';
         } else {
             // Usuario sin rol asignado
+            console.log('Rol no reconocido:', userData.rol);
             throw new Error('Usuario sin rol asignado. Contacte al administrador.');
         }
 
