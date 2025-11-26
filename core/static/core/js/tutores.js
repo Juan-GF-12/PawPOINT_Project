@@ -1,4 +1,6 @@
 // core/static/core/js/tutores.js
+// Versión: 2.0 - Funcionalidad completa con validaciones y SweetAlert2
+// Última actualización: 2025-11-26
 
 let tutorActualId = null;
 
@@ -196,18 +198,20 @@ async function cargarTutores() {
                 <td class="p-4 text-white/70 max-w-xs truncate">${tutor.direccion || 'Sin dirección'}</td>
                 <td class="p-4 rounded-r-xl">
                     <div class="flex justify-center gap-2">
-                        <button onclick="verPacientesTutor(${tutor.id}, '${tutor.nombre} ${tutor.apellido}')" 
-                                class="px-3 py-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 transition-all hover:scale-105" 
+                        <button class="btn-ver-pacientes px-3 py-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 transition-all hover:scale-105" 
+                                data-tutor-id="${tutor.id}"
+                                data-tutor-nombre="${tutor.nombre} ${tutor.apellido}"
                                 title="Ver pacientes">
                             <i class="fas fa-paw"></i>
                         </button>
-                        <button onclick="editarTutor(${tutor.id})" 
-                                class="px-3 py-2 rounded-lg bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-300 transition-all hover:scale-105" 
+                        <button class="btn-editar px-3 py-2 rounded-lg bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-300 transition-all hover:scale-105" 
+                                data-tutor-id="${tutor.id}"
                                 title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button onclick="confirmarEliminacion(${tutor.id}, '${tutor.nombre} ${tutor.apellido}')" 
-                                class="px-3 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-300 transition-all hover:scale-105" 
+                        <button class="btn-eliminar px-3 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-300 transition-all hover:scale-105" 
+                                data-tutor-id="${tutor.id}"
+                                data-tutor-nombre="${tutor.nombre} ${tutor.apellido}"
                                 title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -216,6 +220,24 @@ async function cargarTutores() {
             `;
             
             tableBody.appendChild(row);
+            
+            // Agregar event listeners
+            row.querySelector('.btn-ver-pacientes').addEventListener('click', function() {
+                const tutorId = this.getAttribute('data-tutor-id');
+                const nombreTutor = this.getAttribute('data-tutor-nombre');
+                verPacientesTutor(tutorId, nombreTutor);
+            });
+            
+            row.querySelector('.btn-editar').addEventListener('click', function() {
+                const tutorId = this.getAttribute('data-tutor-id');
+                editarTutor(tutorId);
+            });
+            
+            row.querySelector('.btn-eliminar').addEventListener('click', function() {
+                const tutorId = this.getAttribute('data-tutor-id');
+                const nombreTutor = this.getAttribute('data-tutor-nombre');
+                confirmarEliminacion(tutorId, nombreTutor);
+            });
         });
         
     } catch (error) {
