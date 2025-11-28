@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio Sesión - PawPOINT</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    
+    <!-- Estilos base para el Glassmorphism (Igual que en Registro para consistencia) -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 50%, #7c3aed 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        /* Clase para inputs con efecto cristal */
+        .glass-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.5);
+            ring: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        .glass-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="max-w-sm w-full p-8 rounded-xl glass-effect">
+        
+        <div class="flex flex-col items-center mb-6">
+            <h1 class="text-4xl font-extrabold text-white mb-1 tracking-wider">PawPOINT</h1>
+            <p class="text-sm text-white opacity-70">Inicio de Sesión</p>
+        </div>
+
+        <div class="w-full h-px bg-white opacity-20 mb-6"></div> 
+        
+        <!-- Caja de Alerta para Errores (Oculta por defecto) -->
+        <div id="alert-box" class="hidden mb-4 p-3 rounded-lg text-sm bg-red-500/20 border border-red-500/50 text-red-100 text-center">
+            Usuario o contraseña incorrectos
+        </div>
+
+        <form id="login-form">
+            <!-- Campo Email o Usuario -->
+            <div class="mb-5">
+                <label for="username" class="block text-sm font-medium text-white mb-1 opacity-80">Email o Usuario</label>
+                <input type="text" id="username" placeholder="ejemplo@correo.com" required
+                    class="glass-input w-full px-4 py-2 rounded-lg transition duration-200">
+                <p class="text-xs text-white opacity-60 mt-1">Puedes usar tu email o nombre de usuario</p>
+            </div>
+            
+            <!-- Campo Contraseña -->
+            <div class="mb-6">
+                <label for="password" class="block text-sm font-medium text-white mb-1 opacity-80">Contraseña</label>
+                <input type="password" id="password" placeholder="Ingresa tu contraseña" required
+                    class="glass-input w-full px-4 py-2 rounded-lg transition duration-200">
+            </div>
+            
+            <button type="submit" id="btn-login"
+                class="w-full py-3 rounded-lg font-bold text-gray-800 transition duration-300 transform hover:scale-[1.02] 
+                       bg-white hover:bg-gray-100 shadow-xl flex justify-center items-center gap-2">
+                <span>Iniciar Sesión</span>
+                <!-- Spinner de carga -->
+                <svg id="spinner" class="animate-spin h-5 w-5 text-gray-800 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </button>
+        </form>
+        
+        <div class="mt-6 text-center text-sm">
+            <a href="#" class="text-white opacity-70 hover:opacity-100 transition duration-200 block mb-2">¿Olvidaste tu contraseña?</a>
+            <!-- Uso de etiqueta Django para la URL correcta -->
+            <a href="{% url 'register_view' %}" class="text-white opacity-70 hover:opacity-100 transition duration-200 block">¿No tienes cuenta? ¡Regístrate aquí!</a>
+        </div>
+    </div>
+
+    <!-- LÓGICA DE JAVASCRIPT -->
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // 1. Obtener datos
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // Elementos UI
+            const alertBox = document.getElementById('alert-box');
+            const btnLogin = document.getElementById('btn-login');
+            const spinner = document.getElementById('spinner');
+
+            // 2. Estado de carga
+            alertBox.classList.add('hidden');
+            btnLogin.disabled = true;
+            spinner.classList.remove('hidden');
+
+            try {
+                // 3. Petición al Backend (Django SimpleJWT)
+                const response = await fetch('/api/token/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // 4. ÉXITO: Guardar tokens
+                    localStorage.setItem('accessToken', data.access);
+                    localStorage.setItem('refreshToken', data.refresh);
+                    
+                    // 5. Obtener datos del usuario para verificar su rol
+                    const meResponse = await fetch('/api/me/', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${data.access}`
+                        }
+                    });
+
+                    if (meResponse.ok) {
+                        const userData = await meResponse.json();
+                        console.log('Usuario:', userData);
+                        console.log('Rol:', userData.rol);
+                        
+                        // 6. Redireccionar según el rol
+                        if (userData.rol === 'Tutor') {
+                            console.log('Redirigiendo a portal (tutor)');
+                            window.location.href = '/portal/';
+                        } else if (userData.rol === 'Veterinario' || userData.rol === 'Asistente' || userData.rol === 'Administrador') {
+                            console.log('Redirigiendo a dashboard (staff)');
+                            window.location.href = '/dashboard/';
+                        } else {
+                            throw new Error('Usuario sin rol válido');
+                        }
+                    } else {
+                        throw new Error('No se pudo obtener información del usuario');
+                    }
+                } else {
+                    // 5. ERROR: Credenciales inválidas
+                    alertBox.textContent = "Usuario o contraseña incorrectos";
+                    alertBox.classList.remove('hidden');
+                    btnLogin.disabled = false;
+                    spinner.classList.add('hidden');
+                }
+
+            } catch (error) {
+                console.error("Error de conexión:", error);
+                alertBox.textContent = "Error de conexión con el servidor";
+                alertBox.classList.remove('hidden');
+                btnLogin.disabled = false;
+                spinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

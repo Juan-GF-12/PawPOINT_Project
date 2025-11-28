@@ -1,0 +1,115 @@
+/* glass_theme.css
+   Define las variables y clases base para el efecto Glassmorphism 
+   que no cubre Tailwind por defecto.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    /* Fondo degradado Noche Estrellada */
+    background: linear-gradient(135deg, #111827 0%, #1e3a8a 50%, #581c87 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    color: #ffffff;
+    min-height: 100vh;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1); 
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3); 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5); 
+}
+
+/* Utilidad Glassmorphism Base - Noche Estrellada */
+.glass-panel {
+    background: rgba(17, 24, 39, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Inputs Glass - Noche Estrellada */
+.glass-input {
+    background: rgba(30, 58, 138, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+}
+.glass-input:focus {
+    background: rgba(30, 58, 138, 0.6);
+    outline: none;
+    border-color: rgba(96, 165, 250, 0.5);
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+.glass-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* FullCalendar Overrides para tema oscuro/glass */
+.fc-theme-standard .fc-scrollgrid, 
+.fc-theme-standard td, 
+.fc-theme-standard th {
+    border-color: rgba(255,255,255,0.1) !important;
+}
+.fc .fc-col-header-cell-cushion, 
+.fc .fc-daygrid-day-number,
+.fc .fc-timegrid-slot-label-cushion {
+    color: white !important;
+}
+.fc-day-today {
+    background: rgba(255,255,255,0.1) !important;
+}
+.fc-button-primary {
+    background-color: #1d4ed8 !important;
+    border-color: rgba(255,255,255,0.1) !important;
+}
+.fc-button-primary:hover {
+    background-color: #1e40af !important;
+}
+.fc-event {
+    cursor: pointer;
+}
+
+/* Cards - Noche Estrellada */
+.glass-card {
+    background: rgba(30, 58, 138, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Botones - Noche Estrellada */
+.btn-glass {
+    background: #1d4ed8;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.btn-glass:hover {
+    background: #1e40af;
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.4);
+}
+
+/* Sidebar específico - Noche Estrellada */
+.sidebar-glass {
+    background: rgba(17, 24, 39, 0.6);
+    backdrop-filter: blur(12px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}

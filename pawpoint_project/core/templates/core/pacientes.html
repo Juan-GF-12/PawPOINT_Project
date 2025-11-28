@@ -1,0 +1,184 @@
+{% extends 'core/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Pacientes - PawPOINT{% endblock %}
+{% block header_title %}Gestión de Pacientes{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-full space-y-6">
+    
+    <!-- Header con Buscador -->
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <!-- Buscador -->
+        <div class="relative w-full sm:w-96">
+            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50"></i>
+            <input type="text" id="search-pacientes" placeholder="Buscar por nombre, especie o tutor..." 
+                   class="w-full pl-12 pr-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition shadow-lg">
+        </div>
+
+        <!-- Botón Nuevo Paciente -->
+        <button id="btn-nuevo-paciente" class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-blue-600/30 transition transform hover:-translate-y-1 flex items-center gap-2">
+            <i class="fas fa-plus"></i>
+            <span>Nuevo Paciente</span>
+        </button>
+    </div>
+
+    <!-- Formulario Desplegable (Acordeón) -->
+    <div id="formulario-container" class="glass-panel rounded-2xl overflow-hidden transition-all duration-300 ease-in-out" style="max-height: 0; opacity: 0;">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="formulario-titulo" class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                    <i class="fas fa-paw mr-2"></i>Nuevo Paciente
+                </h3>
+                <button id="btn-cerrar-formulario" class="text-white/70 hover:text-white transition">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <!-- Alerta de Error -->
+            <div id="form-alert-error" class="hidden bg-red-500/20 border border-red-500/50 text-red-100 p-4 rounded-lg mb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="error-message">Error al guardar. Revisa los campos.</span>
+                </div>
+            </div>
+
+            <!-- Formulario -->
+            <form id="paciente-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <input type="hidden" id="paciente-id" value="">
+                
+                <!-- Tutor -->
+                <div class="col-span-2">
+                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
+                        <i class="fas fa-user text-blue-400"></i>
+                        Tutor <span class="text-red-400">*</span>
+                    </label>
+                    <select id="paciente-tutor" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition" required>
+                        <option value="" class="text-gray-800">Seleccione un tutor...</option>
+                    </select>
+                    <span class="error-message hidden text-red-400 text-sm mt-1">Este campo es obligatorio</span>
+                </div>
+
+                <!-- Nombre -->
+                <div>
+                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
+                        <i class="fas fa-paw text-blue-400"></i>
+                        Nombre <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" id="paciente-nombre" placeholder="Ej: Max" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition" required>
+                    <span class="error-message hidden text-red-400 text-sm mt-1">Este campo es obligatorio</span>
+                </div>
+
+                <!-- Especie -->
+                <div>
+                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
+                        <i class="fas fa-dog text-blue-400"></i>
+                        Especie <span class="text-red-400">*</span>
+                    </label>
+                    <select id="paciente-especie" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition" required>
+                        <option value="" class="text-gray-800">Seleccione...</option>
+                        <option value="Perro" class="text-gray-800">Perro</option>
+                        <option value="Gato" class="text-gray-800">Gato</option>
+                        <option value="Ave" class="text-gray-800">Ave</option>
+                        <option value="Conejo" class="text-gray-800">Conejo</option>
+                        <option value="Reptil" class="text-gray-800">Reptil</option>
+                        <option value="Roedor" class="text-gray-800">Roedor</option>
+                        <option value="Otro" class="text-gray-800">Otro</option>
+                    </select>
+                    <span class="error-message hidden text-red-400 text-sm mt-1">Este campo es obligatorio</span>
+                </div>
+
+                <!-- Raza -->
+                <div>
+                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
+                        <i class="fas fa-dna text-blue-400"></i>
+                        Raza
+                    </label>
+                    <input type="text" id="paciente-raza" placeholder="Ej: Golden Retriever" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition">
+                </div>
+
+                <!-- Género -->
+                <div>
+                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
+                        <i class="fas fa-venus-mars text-blue-400"></i>
+                        Género <span class="text-red-400">*</span>
+                    </label>
+                    <select id="paciente-genero" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition" required>
+                        <option value="" class="text-gray-800">Seleccione...</option>
+                        <option value="M" class="text-gray-800">Macho</option>
+                        <option value="H" class="text-gray-800">Hembra</option>
+                    </select>
+                    <span class="error-message hidden text-red-400 text-sm mt-1">Este campo es obligatorio</span>
+                </div>
+
+                <!-- Fecha Nacimiento -->
+                <div>
+                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
+                        <i class="fas fa-birthday-cake text-blue-400"></i>
+                        Fecha de Nacimiento <span class="text-red-400">*</span>
+                    </label>
+                    <input type="date" id="paciente-fecha-nacimiento" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition" required>
+                    <span class="error-message hidden text-red-400 text-sm mt-1">Este campo es obligatorio</span>
+                </div>
+
+                <!-- Campo Color/Características removido - no existe en la base de datos -->
+
+                <!-- Botones -->
+                <div class="col-span-2 flex justify-end gap-3 pt-4 border-t border-white/10">
+                    <button type="button" id="btn-cancelar-form" class="px-6 py-3 rounded-lg bg-white/10 hover:bg-white/20 transition text-white font-semibold">
+                        <i class="fas fa-times mr-2"></i>Cancelar
+                    </button>
+                    <button type="submit" id="btn-guardar-paciente" class="px-8 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold shadow-lg transition transform hover:-translate-y-0.5">
+                        <span id="btn-guardar-texto">
+                            <i class="fas fa-save mr-2"></i>Guardar Paciente
+                        </span>
+                        <span id="btn-guardar-spinner" class="hidden">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>Guardando...
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contenedor Tabla Glass -->
+    <div class="glass-panel rounded-2xl overflow-hidden flex-1">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-white/10 text-white/80 uppercase text-xs tracking-wider">
+                    <tr>
+                        <th class="p-5 font-semibold">ID</th>
+                        <th class="p-5 font-semibold">Paciente</th>
+                        <th class="p-5 font-semibold">Especie</th>
+                        <th class="p-5 font-semibold">Raza</th>
+                        <th class="p-5 font-semibold">Género</th>
+                        <th class="p-5 font-semibold">Edad</th>
+                        <th class="p-5 font-semibold">Tutor</th>
+                        <th class="p-5 font-semibold text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="pacientes-table-body" class="divide-y divide-white/10 text-sm">
+                    <!-- Fila de carga (se reemplaza por JS) -->
+                    <tr id="loading-row">
+                        <td colspan="8" class="p-8 text-center text-white/60">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>Cargando pacientes...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/pacientes.js' %}"></script>
+<style>
+    /* Asegurar que las opciones de los selects se vean con texto oscuro */
+    select option {
+        color: #1f2937 !important;
+        background-color: white !important;
+    }
+</style>
+{% endblock %}

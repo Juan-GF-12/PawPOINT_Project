@@ -1,0 +1,277 @@
+{% extends 'core/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Historial - PawPOINT{% endblock %}
+{% block header_title %}Historial Médico{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Override fondo para esta vista */
+    .main-content {
+        background: #f8f9fa !important;
+    }
+    
+    /* Timeline Connector */
+    .timeline-item {
+        position: relative;
+        padding-left: 2rem;
+        margin-bottom: 2rem;
+        border-left: 2px solid #e9ecef;
+    }
+    
+    /* El "punto" en la línea de tiempo */
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -9px;
+        top: 15px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background-color: #0d6efd;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 2px #e9ecef;
+    }
+    
+    .medical-card {
+        border: none;
+        border-radius: 12px;
+        transition: transform 0.2s;
+        background: white;
+    }
+    
+    .medical-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+    
+    .vital-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        background: #f8f9fa;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Controles dinámicos según rol -->
+<div id="navigation-controls" class="mb-4">
+    <!-- Se llenará dinámicamente con JavaScript -->
+</div>
+
+<div class="row g-4">
+    <!-- COLUMNA IZQUIERDA: Perfil del Paciente (Sticky) -->
+    <div class="col-lg-3">
+        <div class="card shadow-sm sticky-top" style="top: 1rem; border-radius: 16px;">
+            <div class="card-body text-center p-4">
+                <!-- Avatar Paciente -->
+                <div class="mb-3">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center" 
+                         style="width: 120px; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <i class="fas fa-paw text-white" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+                
+                <!-- Nombre Paciente -->
+                <h3 id="paciente-nombre" class="h4 fw-bold text-dark mb-2">Cargando...</h3>
+                <div class="text-muted mb-3">
+                    <span id="paciente-especie">-</span> • <span id="paciente-raza">-</span>
+                </div>
+                
+                <!-- Información con iconos -->
+                <div class="bg-light rounded-3 p-3 mb-3 text-start">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">
+                            <i class="fas fa-birthday-cake text-primary me-2"></i>Edad:
+                        </span>
+                        <span id="paciente-edad" class="fw-semibold">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">
+                            <i class="fas fa-dna text-success me-2"></i>Raza:
+                        </span>
+                        <span id="paciente-raza-detail" class="fw-semibold">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">
+                            <i class="fas fa-user text-info me-2"></i>Tutor:
+                        </span>
+                        <span id="paciente-tutor" class="fw-semibold">-</span>
+                    </div>
+                </div>
+                
+                {% if not es_tutor %}
+                <button id="btn-nueva-ficha" onclick="abrirModalFicha()" class="btn btn-primary w-100 py-2 rounded-pill shadow-sm">
+                    <i class="fas fa-file-medical me-2"></i>Nueva Consulta
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- COLUMNA DERECHA: Timeline de Historial -->
+    <div class="col-lg-9">
+        <div class="d-flex align-items-center mb-4">
+            <div class="border-start border-primary border-4 ps-3">
+                <h4 class="fw-bold text-dark mb-0">Historial Clínico</h4>
+                <p class="text-muted small mb-0">Registro cronológico de consultas</p>
+            </div>
+        </div>
+        
+        <div id="timeline-container">
+            <!-- Los items del timeline se inyectan aquí por JS -->
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                <p>Cargando historial médico...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not es_tutor %}
+<!-- Modal Nueva Ficha (Solo para Veterinarios) -->
+<div class="modal fade" id="modalFicha" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <!-- Header con color -->
+            <div class="modal-header bg-primary text-white" style="border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-file-medical me-2"></i>Registrar Consulta
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <div id="ficha-error" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="formFicha">
+                    <!-- Motivo de Consulta -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="fas fa-clipboard-list text-primary me-2"></i>Motivo de Consulta *
+                        </label>
+                        <input type="text" id="ficha-motivo" class="form-control" placeholder="Ej: Control rutinario, vacunación..." required>
+                    </div>
+
+                    <!-- Diagnóstico -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="fas fa-stethoscope text-success me-2"></i>Diagnóstico *
+                        </label>
+                        <textarea id="ficha-diagnostico" rows="3" class="form-control" placeholder="Descripción detallada del diagnóstico..." required></textarea>
+                    </div>
+
+                    <!-- Signos Vitales en 2 columnas -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-weight text-warning me-2"></i>Peso (kg) *
+                            </label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" min="0.1" id="ficha-peso" class="form-control" placeholder="0.00" required>
+                                <span class="input-group-text bg-light">kg</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-thermometer-half text-danger me-2"></i>Temperatura (°C)
+                            </label>
+                            <div class="input-group">
+                                <input type="number" step="0.1" min="35" max="43" id="ficha-temperatura" class="form-control" placeholder="37.5">
+                                <span class="input-group-text bg-light">°C</span>
+                            </div>
+                            <small class="form-text text-muted">Rango normal: 37.5-39.5°C</small>
+                        </div>
+                    </div>
+
+                    <!-- Notas Adicionales -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="fas fa-notes-medical text-info me-2"></i>Notas Adicionales
+                        </label>
+                        <textarea id="ficha-notas" rows="2" class="form-control" placeholder="Observaciones generales..."></textarea>
+                    </div>
+
+                    <!-- Tratamiento / Receta -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold d-flex align-items-center">
+                            <i class="fas fa-pills text-purple me-2"></i>
+                            <span>Receta Médica</span>
+                            <span class="badge bg-info ms-2">Opcional</span>
+                        </label>
+                        
+                        <div id="medicamentos-container" class="border rounded-3 p-3 bg-light">
+                            <!-- Primera fila de medicamento -->
+                            <div class="row g-2 mb-2 medicamento-row">
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">Medicamento</label>
+                                    <input type="text" class="form-control form-control-sm" placeholder="Nombre" name="med_nombre[]">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Cantidad</label>
+                                    <input type="number" step="0.01" class="form-control form-control-sm" placeholder="0.00" name="med_cantidad[]">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Unidad</label>
+                                    <select class="form-select form-select-sm" name="med_unidad[]">
+                                        <option value="">Elegir</option>
+                                        <option value="mg">mg</option>
+                                        <option value="ml">ml</option>
+                                        <option value="ui">ui</option>
+                                        <option value="comprimidos">comprimidos</option>
+                                        <option value="gotas">gotas</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Frecuencia</label>
+                                    <select class="form-select form-select-sm" name="med_frecuencia[]">
+                                        <option value="">Elegir</option>
+                                        <option value="c/24h">c/24h</option>
+                                        <option value="c/12h">c/12h</option>
+                                        <option value="c/8h">c/8h</option>
+                                        <option value="c/6h">c/6h</option>
+                                        <option value="c/4h">c/4h</option>
+                                        <option value="única vez">Única vez</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Duración (días)</label>
+                                    <input type="number" step="1" min="1" class="form-control form-control-sm" placeholder="7" name="med_duracion[]">
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label small text-muted invisible">X</label>
+                                    <button type="button" onclick="eliminarFila(this)" class="btn btn-sm btn-outline-danger w-100 invisible" title="Eliminar">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Botón para agregar más medicamentos -->
+                        <button type="button" onclick="agregarMedicamento()" class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="fas fa-plus-circle me-1"></i>Agregar Medicamento
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" onclick="guardarFicha()" class="btn btn-primary px-4">
+                    <i class="fas fa-save me-2"></i>Guardar Ficha
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/historial.js' %}"></script>
+{% endblock %}

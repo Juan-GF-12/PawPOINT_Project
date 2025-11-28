@@ -1,0 +1,358 @@
+{% extends 'core/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Gestión Clínica - PawPOINT{% endblock %}
+{% block header_title %}Gestión Clínica y Consultas{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-full space-y-6">
+    
+    <!-- Header con Estadísticas Rápidas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Consultas Hoy -->
+        <div class="glass-panel p-4 rounded-xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-white/60 text-sm">Consultas Hoy</p>
+                    <p id="consultas-hoy" class="text-3xl font-bold text-white">0</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <i class="fas fa-stethoscope text-blue-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pacientes en Tratamiento -->
+        <div class="glass-panel p-4 rounded-xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-white/60 text-sm">En Tratamiento</p>
+                    <p id="pacientes-tratamiento" class="text-3xl font-bold text-white">0</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <i class="fas fa-pills text-green-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Citas Pendientes -->
+        <div class="glass-panel p-4 rounded-xl">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-white/60 text-sm">Citas Pendientes</p>
+                    <p id="citas-pendientes" class="text-3xl font-bold text-white">0</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <i class="fas fa-calendar-check text-purple-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Búsqueda Prominente -->
+    <div class="glass-panel p-6 rounded-2xl">
+        <div class="text-center mb-4">
+            <h2 class="text-2xl font-bold text-white mb-2">🔍 Buscar Paciente para Consulta</h2>
+            <p class="text-white/60 text-sm">Ingresa el nombre del paciente, número de chip o nombre del tutor</p>
+        </div>
+        
+        <div class="relative max-w-2xl mx-auto">
+            <i class="fas fa-search absolute left-5 top-1/2 transform -translate-y-1/2 text-white/50 text-xl"></i>
+            <input 
+                type="text" 
+                id="search-paciente" 
+                placeholder="Ej: Max, Luna, Chip: 123456789..." 
+                class="w-full pl-14 pr-4 py-4 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition shadow-lg text-lg"
+                autocomplete="off"
+            >
+        </div>
+    </div>
+
+    <!-- Resultados de Búsqueda -->
+    <div id="resultados-container" class="hidden">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Resultados de Búsqueda</h3>
+            <button id="btn-limpiar" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition text-white text-sm">
+                <i class="fas fa-times mr-2"></i>Limpiar
+            </button>
+        </div>
+        
+        <div id="resultados-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Las tarjetas de pacientes se insertan aquí dinámicamente -->
+        </div>
+    </div>
+
+    <!-- Mensaje cuando no hay resultados -->
+    <div id="sin-resultados" class="hidden text-center py-12">
+        <i class="fas fa-search text-white/30 text-6xl mb-4"></i>
+        <p class="text-white/60 text-lg">No se encontraron pacientes con ese criterio</p>
+    </div>
+
+    <!-- Estado inicial (sin búsqueda) -->
+    <div id="estado-inicial" class="text-center py-12">
+        <i class="fas fa-paw text-white/30 text-6xl mb-4"></i>
+        <p class="text-white/60 text-lg">Utiliza el buscador para encontrar un paciente</p>
+        <p class="text-white/40 text-sm mt-2">Podrás acceder a su historial clínico y crear nuevas consultas</p>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ============================================================================
+    // VARIABLES GLOBALES
+    // ============================================================================
+    let pacientesData = [];
+
+    // ============================================================================
+    // INICIALIZACIÓN
+    // ============================================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarEstadisticas();
+        configurarBuscador();
+    });
+
+    // ============================================================================
+    // FUNCIONES DE CARGA DE DATOS
+    // ============================================================================
+
+    /**
+     * Carga las estadísticas rápidas del dashboard clínico
+     */
+    function cargarEstadisticas() {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/login/';
+            return;
+        }
+
+        // Cargar consultas de hoy
+        fetch('/api/fichas/', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(response => response.json())
+        .then(fichas => {
+            const hoy = new Date().toISOString().split('T')[0];
+            const consultasHoy = fichas.filter(f => f.fecha_consulta === hoy).length;
+            document.getElementById('consultas-hoy').textContent = consultasHoy;
+        })
+        .catch(error => console.error('Error cargando consultas:', error));
+
+        // Cargar tratamientos activos
+        fetch('/api/tratamientos/', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(response => response.json())
+        .then(tratamientos => {
+            const hoy = new Date();
+            const activos = tratamientos.filter(t => {
+                if (!t.fecha_fin) return true;
+                return new Date(t.fecha_fin) >= hoy;
+            });
+            // Contar pacientes únicos
+            const pacientesUnicos = new Set(activos.map(t => t.ficha_clinica));
+            document.getElementById('pacientes-tratamiento').textContent = pacientesUnicos.size;
+        })
+        .catch(error => console.error('Error cargando tratamientos:', error));
+
+        // Cargar citas pendientes
+        fetch('/api/citas/', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(response => response.json())
+        .then(citas => {
+            const ahora = new Date();
+            const pendientes = citas.filter(c => new Date(c.fecha_hora) > ahora).length;
+            document.getElementById('citas-pendientes').textContent = pendientes;
+        })
+        .catch(error => console.error('Error cargando citas:', error));
+    }
+
+    /**
+     * Configura el buscador de pacientes
+     */
+    function configurarBuscador() {
+        const searchInput = document.getElementById('search-paciente');
+        let timeoutId;
+
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(timeoutId);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                mostrarEstadoInicial();
+                return;
+            }
+
+            // Debounce: esperar 300ms después de que el usuario deje de escribir
+            timeoutId = setTimeout(() => {
+                buscarPacientes(query);
+            }, 300);
+        });
+
+        // Botón limpiar
+        document.getElementById('btn-limpiar').addEventListener('click', function() {
+            searchInput.value = '';
+            mostrarEstadoInicial();
+        });
+    }
+
+    /**
+     * Busca pacientes por nombre, chip o tutor
+     */
+    function buscarPacientes(query) {
+        const token = localStorage.getItem('accessToken');
+        
+        fetch('/api/pacientes/', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(response => response.json())
+        .then(pacientes => {
+            // Filtrar pacientes que coincidan con la búsqueda
+            const queryLower = query.toLowerCase();
+            const resultados = pacientes.filter(p => {
+                return p.nombre.toLowerCase().includes(queryLower) ||
+                       (p.numero_chip && p.numero_chip.toLowerCase().includes(queryLower)) ||
+                       (p.tutor_nombre && p.tutor_nombre.toLowerCase().includes(queryLower));
+            });
+
+            mostrarResultados(resultados);
+        })
+        .catch(error => {
+            console.error('Error buscando pacientes:', error);
+            Swal.fire({
+                title: 'Error',
+                text: 'No se pudieron cargar los pacientes.',
+                icon: 'error',
+                confirmButtonColor: '#0061ff'
+            });
+        });
+    }
+
+    /**
+     * Muestra los resultados de búsqueda en tarjetas
+     */
+    function mostrarResultados(pacientes) {
+        document.getElementById('estado-inicial').classList.add('hidden');
+        document.getElementById('sin-resultados').classList.add('hidden');
+        document.getElementById('resultados-container').classList.remove('hidden');
+
+        const grid = document.getElementById('resultados-grid');
+
+        if (pacientes.length === 0) {
+            document.getElementById('resultados-container').classList.add('hidden');
+            document.getElementById('sin-resultados').classList.remove('hidden');
+            return;
+        }
+
+        grid.innerHTML = '';
+
+        pacientes.forEach(paciente => {
+            const tarjeta = crearTarjetaPaciente(paciente);
+            grid.appendChild(tarjeta);
+        });
+    }
+
+    /**
+     * Crea una tarjeta de paciente con botón de abrir historial
+     */
+    function crearTarjetaPaciente(paciente) {
+        const div = document.createElement('div');
+        div.className = 'glass-panel p-5 rounded-xl hover:bg-white/15 transition cursor-pointer';
+        
+        const iconoEspecie = obtenerIconoEspecie(paciente.especie);
+        const edad = calcularEdad(paciente.fecha_nacimiento);
+
+        div.innerHTML = `
+            <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xl">
+                        ${iconoEspecie}
+                    </div>
+                    <div>
+                        <h3 class="text-white font-bold text-lg">${paciente.nombre}</h3>
+                        <p class="text-white/60 text-sm">${paciente.especie} • ${paciente.genero === 'M' ? 'Macho' : 'Hembra'}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-2 mb-4 text-sm text-white/70">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-birthday-cake text-white/50"></i>
+                    <span>${edad}</span>
+                </div>
+                ${paciente.raza ? `
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-paw text-white/50"></i>
+                    <span>${paciente.raza}</span>
+                </div>
+                ` : ''}
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-user text-white/50"></i>
+                    <span>${paciente.tutor_nombre || 'Sin tutor'}</span>
+                </div>
+            </div>
+
+            <button onclick="abrirHistorial(${paciente.id})" class="w-full py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                <i class="fas fa-notes-medical"></i>
+                <span>Abrir Historial</span>
+            </button>
+        `;
+
+        return div;
+    }
+
+    /**
+     * Obtiene el icono según la especie del paciente
+     */
+    function obtenerIconoEspecie(especie) {
+        const iconos = {
+            'Perro': '<i class="fas fa-dog"></i>',
+            'Gato': '<i class="fas fa-cat"></i>',
+            'Ave': '<i class="fas fa-dove"></i>',
+            'Conejo': '<i class="fas fa-rabbit"></i>',
+            'Roedor': '<i class="fas fa-mouse"></i>',
+            'Reptil': '<i class="fas fa-dragon"></i>'
+        };
+        return iconos[especie] || '<i class="fas fa-paw"></i>';
+    }
+
+    /**
+     * Calcula la edad del paciente
+     */
+    function calcularEdad(fechaNacimiento) {
+        const nacimiento = new Date(fechaNacimiento);
+        const hoy = new Date();
+        let edad = hoy.getFullYear() - nacimiento.getFullYear();
+        const mes = hoy.getMonth() - nacimiento.getMonth();
+        
+        if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+            edad--;
+        }
+
+        if (edad === 0) {
+            const meses = Math.floor((hoy - nacimiento) / (1000 * 60 * 60 * 24 * 30));
+            return `${meses} ${meses === 1 ? 'mes' : 'meses'}`;
+        }
+
+        return `${edad} ${edad === 1 ? 'año' : 'años'}`;
+    }
+
+    /**
+     * Redirige al historial del paciente
+     */
+    function abrirHistorial(pacienteId) {
+        window.location.href = `/historial/?paciente_id=${pacienteId}`;
+    }
+
+    /**
+     * Muestra el estado inicial (sin búsqueda)
+     */
+    function mostrarEstadoInicial() {
+        document.getElementById('resultados-container').classList.add('hidden');
+        document.getElementById('sin-resultados').classList.add('hidden');
+        document.getElementById('estado-inicial').classList.remove('hidden');
+    }
+</script>
+{% endblock %}

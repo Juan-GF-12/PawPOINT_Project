@@ -1,0 +1,187 @@
+/* Importación de Google Fonts - Poppins (Noche Estrellada) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f4f7f6;
+}
+
+/* --- Estilos Login - Noche Estrellada --- */
+.login-page {
+    background: linear-gradient(135deg, #111827 0%, #1e3a8a 50%, #581c87 100%);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.glass-card {
+    background: rgba(17, 24, 39, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 2.5rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    color: white;
+}
+.glass-card .form-control {
+    background: rgba(30, 58, 138, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: white;
+    padding: 0.75rem 1rem;
+}
+.glass-card .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+.glass-card .form-label {
+    font-weight: 600;
+}
+.glass-card .btn-primary {
+    background: #1d4ed8;
+    color: #ffffff;
+    border: none;
+    font-weight: 700;
+    padding: 0.75rem;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+.glass-card .btn-primary:hover {
+    background: #1e40af;
+    box-shadow: 0 4px 15px rgba(29, 78, 216, 0.4);
+}
+.glass-card a {
+    color: #ffffff;
+    font-weight: 600;
+    text-decoration: none;
+}
+.glass-card a:hover {
+    text-decoration: underline;
+}
+.paw-logo {
+    fill: white;
+    width: 60px;
+    height: 60px;
+}
+
+/* --- Estilos Dashboard / Pacientes --- */
+.sidebar {
+    background-color: #ffffff;
+    border-right: 1px solid #e0e0e0;
+}
+.sidebar .nav-link {
+    color: #555;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    border-radius: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+.sidebar .nav-link .icon {
+    width: 20px;
+    margin-right: 1rem;
+    text-align: center;
+}
+.sidebar .nav-link:hover, .sidebar .nav-link.active {
+    background-color: #e6f0ff;
+    color: #0061ff;
+}
+.sidebar-logo {
+    fill: #0061ff;
+    width: 40px;
+}
+.main-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 1rem 1.5rem;
+}
+.main-content {
+    padding: 2rem;
+}
+.stat-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.stat-card .card-body {
+    padding: 1.5rem;
+}
+.stat-card .stat-icon {
+    font-size: 1.5rem;
+    padding: 1rem;
+    border-radius: 50%;
+}
+.icon-citas { background-color: #e6f0ff; color: #0061ff; }
+.icon-pacientes { background-color: #e0f8f0; color: #00bfa5; }
+.icon-tutores { background-color: #fff4e0; color: #ffab00; }
+.icon-alertas { background-color: #ffe6e6; color: #ff5252; }
+
+/* --- Estilos Adicionales para Index --- */
+
+.hero {
+    background: linear-gradient(135deg, #0061ff, #60efff);
+    padding-top: 10rem;
+    padding-bottom: 6rem;
+}
+
+.feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 0.75rem;
+    font-size: 2rem;
+}
+
+section img {
+    max-width: 100%;
+    border-radius: 0.75rem;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+/* --- Estilos Historial Médico (Timeline) --- */
+.timeline-container {
+    position: relative;
+    padding-left: 2rem;
+    border-left: 3px solid #e9ecef; /* Línea vertical */
+    margin-left: 1rem;
+}
+
+.timeline-card {
+    position: relative;
+    margin-bottom: 2rem;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05); /* Sombra moderna suave */
+    transition: transform 0.2s ease;
+}
+
+.timeline-card:hover {
+    transform: translateY(-3px); /* Efecto flotante al pasar mouse */
+}
+
+/* El punto (dot) en la línea de tiempo */
+.timeline-card::before {
+    content: '';
+    position: absolute;
+    left: -2.6rem; /* Ajustar según padding del container */
+    top: 1.5rem;
+    width: 16px;
+    height: 16px;
+    background: #0061ff; /* Color primario */
+    border: 3px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(0, 97, 255, 0.2);
+}
+
+.timeline-date {
+    font-weight: 700;
+    color: #0061ff;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}

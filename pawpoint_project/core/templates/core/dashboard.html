@@ -1,0 +1,147 @@
+{% extends 'core/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Dashboard - PawPOINT{% endblock %}
+{% block header_title %}Panel de Control Veterinario{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+
+    <!-- SECCIÓN PRINCIPAL (Izquierda - 60%) - AGENDA DE HOY -->
+    <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Header de Agenda -->
+        <div class="glass-panel p-6 rounded-2xl">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fas fa-calendar-day text-blue-400"></i>
+                    Agenda de Hoy
+                </h2>
+                <span id="fecha-hoy" class="text-white/60 text-sm"></span>
+            </div>
+            <p class="text-white/70 text-sm">Citas programadas para hoy en orden cronológico</p>
+        </div>
+
+        <!-- Lista de Citas de Hoy -->
+        <div id="citas-hoy-container" class="space-y-4">
+            <!-- Las citas se cargarán dinámicamente aquí -->
+            <div id="loading-citas" class="glass-panel p-8 rounded-2xl text-center">
+                <i class="fas fa-spinner fa-spin text-white/50 text-3xl mb-3"></i>
+                <p class="text-white/60">Cargando citas del día...</p>
+            </div>
+        </div>
+
+        <!-- Sin citas hoy -->
+        <div id="sin-citas-hoy" class="hidden glass-panel p-12 rounded-2xl text-center">
+            <i class="fas fa-coffee text-white/30 text-6xl mb-4"></i>
+            <h3 class="text-xl font-bold text-white mb-2">Sin citas programadas</h3>
+            <p class="text-white/60 mb-6">No hay citas agendadas para hoy</p>
+            <a href="{% url 'citas_view' %}" class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold transition">
+                <i class="fas fa-calendar-plus"></i>
+                Agendar Nueva Cita
+            </a>
+        </div>
+    </div>
+
+    <!-- SECCIÓN LATERAL (Derecha - 40%) - RESUMEN RÁPIDO -->
+    <div class="lg:col-span-1 space-y-6">
+        
+        <!-- Estadísticas Rápidas -->
+        <div class="glass-panel p-6 rounded-2xl">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-chart-line text-purple-400"></i>
+                Resumen Rápido
+            </h3>
+            
+            <div class="space-y-4">
+                <!-- Citas de Hoy -->
+                <div class="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                            <i class="fas fa-calendar-check text-blue-400"></i>
+                        </div>
+                        <span class="text-white/80 text-sm">Citas Hoy</span>
+                    </div>
+                    <span id="stat-citas-hoy" class="text-2xl font-bold text-white">0</span>
+                </div>
+
+                <!-- Pacientes en Tratamiento -->
+                <div class="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                            <i class="fas fa-pills text-green-400"></i>
+                        </div>
+                        <span class="text-white/80 text-sm">En Tratamiento</span>
+                    </div>
+                    <span id="stat-tratamientos" class="text-2xl font-bold text-white">0</span>
+                </div>
+
+                <!-- Citas Pendientes (futuras) -->
+                <div class="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                            <i class="fas fa-clock text-yellow-400"></i>
+                        </div>
+                        <span class="text-white/80 text-sm">Pendientes</span>
+                    </div>
+                    <span id="stat-pendientes" class="text-2xl font-bold text-white">0</span>
+                </div>
+
+                <!-- Total Pacientes -->
+                <div class="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                            <i class="fas fa-paw text-purple-400"></i>
+                        </div>
+                        <span class="text-white/80 text-sm">Total Pacientes</span>
+                    </div>
+                    <span id="stat-pacientes" class="text-2xl font-bold text-white">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accesos Directos -->
+        <div class="glass-panel p-6 rounded-2xl">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-bolt text-yellow-400"></i>
+                Accesos Rápidos
+            </h3>
+            
+            <div class="space-y-3">
+                <a href="{% url 'pacientes_view' %}" class="block w-full py-3 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold text-center transition transform hover:-translate-y-1 shadow-lg">
+                    <i class="fas fa-plus-circle mr-2"></i>
+                    Nuevo Paciente
+                </a>
+                
+                <a href="{% url 'citas_view' %}" class="block w-full py-3 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-semibold text-center transition transform hover:-translate-y-1 shadow-lg">
+                    <i class="fas fa-calendar-plus mr-2"></i>
+                    Agendar Cita
+                </a>
+                
+                <a href="{% url 'gestion_clinica_view' %}" class="block w-full py-3 px-4 rounded-lg bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold text-center transition transform hover:-translate-y-1 shadow-lg">
+                    <i class="fas fa-stethoscope mr-2"></i>
+                    Gestión Clínica
+                </a>
+            </div>
+        </div>
+
+        <!-- Información del Usuario -->
+        <div class="glass-panel p-6 rounded-2xl">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xl font-bold">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <div>
+                    <p class="text-white font-semibold" id="user-name">Cargando...</p>
+                    <p class="text-white/60 text-sm" id="user-rol">Veterinario</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/dashboard.js' %}"></script>
+{% endblock %}
