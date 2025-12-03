@@ -6,14 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro - PawPOINT</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="{% static 'core/js/validaciones.js' %}"></script>
     
-    <!-- Estilos base para el Glassmorphism -->
+    <!-- Estilos base para el Glassmorphism - Paleta Noche Estrellada -->
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1e3a8a 0%, #0ea5e9 50%, #7c3aed 100%);
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #111827 0%, #1e3a8a 50%, #581c87 100%);
             background-attachment: fixed;
             min-height: 100vh;
             display: flex;
@@ -21,11 +21,21 @@
             justify-content: center;
         }
         .glass-effect {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(17, 24, 39, 0.6);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        }
+        /* Inputs con efecto cristal */
+        input[type="text"], input[type="email"], input[type="password"], input[type="tel"], select {
+            background: rgba(30, 58, 138, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        input:focus, select:focus {
+            background: rgba(30, 58, 138, 0.6) !important;
+            border-color: rgba(96, 165, 250, 0.5) !important;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) !important;
         }
     </style>
 </head>
