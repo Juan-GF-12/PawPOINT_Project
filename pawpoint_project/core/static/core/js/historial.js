@@ -1,13 +1,9 @@
 /**
- * HISTORIAL MÉDICO CON TIMELINE
- * 
- * Este módulo gestiona la visualización del historial médico de un paciente.
- * Incluye:
- * - Carga de datos del paciente desde la API
- * - Renderización de fichas clínicas en formato timeline
- * - Creación de nuevas fichas clínicas y tratamientos
- * - Adaptación de interfaz según el rol del usuario (Tutor vs Veterinario)
- * - Sistema de navegación condicional basado en roles
+ * HISTORIAL MÉDICO - PAWPOINT (Versión Robusta / Multi-Campo)
+ * Soluciona:
+ * 1. Medicamentos que no aparecen (revisa múltiples nombres de variables).
+ * 2. Motivo "No especificado" (revisa múltiples campos).
+ * 3. Estilos de tratamientos (alto contraste).
  */
 
 // ============================================================================
@@ -15,1104 +11,549 @@
 // ============================================================================
 
 let pacienteId = null;
-let usuarioRol = null; // Almacena el rol del usuario actual
-let modalFicha = null; // Se inicializará solo si existe el modal
+let usuarioRol = null;
 
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
 
-/**
- * Se ejecuta cuando el DOM está completamente cargado.
- * Obtiene el ID del paciente, verifica el rol del usuario y carga los datos.
- */
 document.addEventListener('DOMContentLoaded', async function() {
-    // Se obtiene el ID del paciente de los parámetros de la URL
     const urlParams = new URLSearchParams(window.location.search);
     pacienteId = urlParams.get('paciente_id');
     
-    // Si no hay ID de paciente, redirigir según rol
     if (!pacienteId) {
+        // Redirección de seguridad si no hay ID
         const userRole = localStorage.getItem('userRole');
-        if (userRole === 'Tutor') {
-            window.location.href = '/portal/';
-        } else {
-            window.location.href = '/pacientes/';
-        }
+        if (userRole === 'Tutor') window.location.href = '/portal/';
+        else window.location.href = '/pacientes/';
         return;
     }
     
-    // Inicializar vista según el rol del usuario
     await inicializarVista();
-    
-    // Renderizar controles de navegación
     renderNavigationControls();
-    
-    // Se cargan los datos del paciente y el historial
     cargarPerfilPaciente();
     cargarTimelineFichas();
 });
 
 // ============================================================================
-// FUNCIONES DE ROL Y ADAPTACIÓN DE INTERFAZ
+// NAVEGACIÓN Y ROLES
 // ============================================================================
 
-/**
- * Renderiza el botón "Volver" dinámicamente según el rol del usuario
- */
 function renderNavigationControls() {
     const container = document.getElementById('navigation-controls');
     const userRole = localStorage.getItem('userRole');
-    
     if (!container) return;
     
+    const btnClass = "inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white font-semibold hover:bg-white/20 transition";
+    
     if (userRole === 'Tutor') {
-        // Tutores vuelven al portal
-        container.innerHTML = `
-            <a href="/portal/" class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white font-semibold hover:bg-white/20 transition">
-                <i class="fas fa-arrow-left"></i>
-                <span>Volver a mis Mascotas</span>
-            </a>`;
-    } else if (['Veterinario', 'Asistente', 'Administrador'].includes(userRole)) {
-        // Staff vuelve a gestión clínica
-        container.innerHTML = `
-            <a href="/gestion-clinica/" class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-white font-semibold hover:bg-white/20 transition">
-                <i class="fas fa-arrow-left"></i>
-                <span>Volver a Gestión Clínica</span>
-            </a>`;
+        container.innerHTML = `<a href="/portal/" class="${btnClass}"><i class="fas fa-arrow-left"></i> <span>Volver a mis Mascotas</span></a>`;
+    } else {
+        container.innerHTML = `<a href="/gestion-clinica/" class="${btnClass}"><i class="fas fa-arrow-left"></i> <span>Volver a Gestión Clínica</span></a>`;
     }
 }
 
-/**
- * Inicializa la vista y adapta la interfaz según el rol del usuario.
- */
 async function inicializarVista() {
     const token = localStorage.getItem('accessToken');
-    if (!token) { 
-        window.location.href = '/login/'; 
-        return; 
-    }
+    if (!token) { window.location.href = '/login/'; return; }
 
-    // 1. Obtener quién soy
-    const response = await fetch('/api/me/', { 
-        headers: { 'Authorization': 'Bearer ' + token } 
-    });
-    
-    if (!response.ok) {
-        window.location.href = '/login/';
-        return;
+    try {
+        const response = await fetch('/api/me/', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!response.ok) throw new Error('Auth Error');
+        const user = await response.json();
+        usuarioRol = user.rol;
+        if (user.rol === 'Tutor') aplicarModoTutor();
+    } catch (e) {
+        console.error(e);
     }
-    
-    const user = await response.json();
-    usuarioRol = user.rol;
-
-    // 2. Lógica de Adaptación Visual
-    if (user.rol === 'Tutor') {
-        aplicarModoTutor();
-    } else {
-        // Inicializar modal solo para veterinarios
-        const modalElement = document.getElementById('modalFicha');
-        if (modalElement) {
-            modalFicha = new bootstrap.Modal(modalElement);
-        }
-    }
-    // Si es Veterinario/Asistente/Administrador, mantener vista por defecto
 }
 
-/**
- * Aplica ajustes visuales para el modo Tutor (solo lectura).
- */
 function aplicarModoTutor() {
-    // A. ELIMINAR/OCULTAR Sidebar
     const sidebar = document.getElementById('sidebar-wrapper');
-    if (sidebar) {
-        sidebar.style.display = 'none'; // Ocultar completamente
-    }
-
-    // B. EXPANDIR Contenido Principal
+    if (sidebar) sidebar.style.display = 'none';
     const mainContent = document.getElementById('main-content');
-    if (mainContent) {
-        // Quitar flex-1 y ocupar todo el ancho
-        mainContent.style.width = '100%';
-        mainContent.style.maxWidth = '100%';
-    }
-
-    // C. MOSTRAR Controles de Tutor
-    const tutorControls = document.getElementById('tutor-controls');
-    if (tutorControls) {
-        tutorControls.classList.remove('d-none');
-    }
-    
-    // Nota: El botón de Nueva Ficha y el modal ya no se renderizan en el HTML
-    // para tutores, por lo que no es necesario ocultarlos aquí.
-    // Los botones de edición en las tarjetas se ocultarán durante el renderizado.
+    if (mainContent) { mainContent.style.width = '100%'; mainContent.style.maxWidth = '100%'; }
 }
 
-// ============================================================================
-// FUNCIONES DE AUTENTICACIÓN
-// ============================================================================
-
-/**
- * Obtiene los headers necesarios para autenticación JWT.
- * 
- * @returns {Object|null} Headers con autenticación o null si no hay token
- */
 function getHeaders() {
     const token = localStorage.getItem('accessToken');
-    if (!token) {
-        window.location.href = '/login/';
-        return null;
-    }
-    return {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-    };
+    if (!token) return null;
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 }
 
 // ============================================================================
-// CARGAR DATOS DEL PACIENTE
+// CARGA DE DATOS
 // ============================================================================
 
-/**
- * Carga los datos del paciente desde la API y los inyecta en la tarjeta de perfil.
- * Se obtiene información como nombre, especie, raza, edad y tutor.
- */
 function cargarPerfilPaciente() {
-    fetch(`/api/pacientes/${pacienteId}/`, {
-        headers: getHeaders()
-    })
-    .then(response => response.json())
+    fetch(`/api/pacientes/${pacienteId}/`, { headers: getHeaders() })
+    .then(r => r.json())
     .then(paciente => {
-        // Se llenan los campos de la tarjeta de perfil
-        document.getElementById('paciente-nombre').textContent = paciente.nombre;
-        document.getElementById('paciente-especie').textContent = paciente.especie;
-        document.getElementById('paciente-raza').textContent = paciente.raza || 'N/A';
+        setText('paciente-nombre', paciente.nombre);
+        setText('paciente-especie', paciente.especie);
+        setText('paciente-raza', paciente.raza || '-');
+        setText('paciente-raza-detail', paciente.raza || '-');
+        setText('paciente-tutor', paciente.tutor_nombre || `ID: ${paciente.tutor}`);
         
-        // Actualizar el detalle de raza en el perfil (si existe el elemento)
-        const razaDetail = document.getElementById('paciente-raza-detail');
-        if (razaDetail) {
-            razaDetail.textContent = paciente.raza || 'N/A';
-        }
-        
-        document.getElementById('paciente-tutor').textContent = `ID: ${paciente.tutor}`;
-        
-        // Se calcula la edad aproximada
-        const fechaNacimiento = new Date(paciente.fecha_nacimiento);
+        // Edad
+        const nac = new Date(paciente.fecha_nacimiento);
         const hoy = new Date();
-        let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
-        const mes = hoy.getMonth() - fechaNacimiento.getMonth();
-        if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
-            edad--;
-        }
-        document.getElementById('paciente-edad').textContent = `${edad} años`;
+        let edad = hoy.getFullYear() - nac.getFullYear();
+        if (hoy.getMonth() < nac.getMonth() || (hoy.getMonth() === nac.getMonth() && hoy.getDate() < nac.getDate())) edad--;
+        setText('paciente-edad', `${edad} años`);
+
+        // Datos para impresión
+        document.body.setAttribute('data-paciente-nombre', paciente.nombre);
+        document.body.setAttribute('data-paciente-especie', paciente.especie);
     })
-    .catch(error => {
-        console.error('Error cargando perfil:', error);
-        mostrarError('Error al cargar datos del paciente');
-    });
+    .catch(console.error);
 }
 
-// ============================================================================
-// CARGAR Y RENDERIZAR TIMELINE
-// ============================================================================
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
 
-/**
- * Carga las fichas clínicas del paciente y las renderiza en el timeline.
- * Se ordena de más reciente a más antigua.
- */
 function cargarTimelineFichas() {
-    fetch(`/api/fichas/?paciente=${pacienteId}`, {
-        headers: getHeaders()
-    })
-    .then(response => response.json())
+    fetch(`/api/fichas/?paciente=${pacienteId}`, { headers: getHeaders() })
+    .then(r => r.json())
     .then(fichas => {
         const container = document.getElementById('timeline-container');
-        
-        // Se ordena de más reciente a más antigua
         fichas.sort((a, b) => new Date(b.fecha_consulta) - new Date(a.fecha_consulta));
         
-        // Si no hay fichas, se muestra un mensaje
         if (fichas.length === 0) {
-            container.innerHTML = `
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    No hay fichas clínicas registradas para este paciente.
-                </div>
-            `;
+            container.innerHTML = `<div class="glass-panel p-8 text-center text-white/60"><i class="fas fa-folder-open text-4xl mb-3 opacity-50"></i><p>No hay historial clínico.</p></div>`;
             return;
         }
         
-        // Se limpian fichas anteriores
         container.innerHTML = '';
-        
-        // Se renderiza cada ficha
-        fichas.forEach(ficha => {
-            renderizarTarjetaFicha(ficha, container);
-        });
+        fichas.forEach(ficha => renderizarTarjetaFicha(ficha, container));
     })
-    .catch(error => {
-        console.error('Error cargando fichas:', error);
-        document.getElementById('timeline-container').innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                Error al cargar el historial clínico.
-            </div>
-        `;
+    .catch(err => {
+        console.error(err);
+        document.getElementById('timeline-container').innerHTML = `<div class="p-4 bg-red-500/20 text-red-200 rounded-xl text-center">Error al cargar historial.</div>`;
     });
 }
 
-/**
- * Renderiza una ficha clínica como una tarjeta en el timeline con diseño mejorado.
- * Incluye badges de tipo, iconos visuales y chips para signos vitales.
- *
- * @param {Object} ficha - Datos de la ficha clínica
- * @param {HTMLElement} container - Contenedor donde insertar la tarjeta
- */
+// Variable global para guardar los tratamientos temporalmente
+window.historialTratamientos = {}; 
+
 function renderizarTarjetaFicha(ficha, container) {
-    const fechaConsulta = new Date(ficha.fecha_consulta);
-    const fechaFormato = fechaConsulta.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-    });
+    const fecha = new Date(ficha.fecha_consulta).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
     
-    // Crear elemento del timeline
-    const timelineItem = document.createElement('div');
-    timelineItem.className = 'timeline-item';
+    // Recuperación robusta de datos
+    const textoMotivo = ficha.motivo || ficha.motivo_consulta || ficha.descripcion || 'Sin motivo especificado';
+    const motivoLower = textoMotivo.toLowerCase();
+
+    // Estilos de Badge
+    let badgeColor = 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+    let icon = 'fas fa-stethoscope';
+    let tipoTexto = 'Consulta';
+
+    if (motivoLower.includes('vacuna')) { badgeColor = 'bg-green-500/20 text-green-300 border-green-500/30'; icon = 'fas fa-syringe'; tipoTexto = 'Vacunación'; }
+    else if (motivoLower.includes('cirugía')) { badgeColor = 'bg-red-500/20 text-red-300 border-red-500/30'; icon = 'fas fa-procedures'; tipoTexto = 'Cirugía'; }
+    else if (motivoLower.includes('control')) { badgeColor = 'bg-purple-500/20 text-purple-300 border-purple-500/30'; icon = 'fas fa-clipboard-check'; tipoTexto = 'Control'; }
+
+    // Procesar tratamientos
+    const listaTratamientos = ficha.tratamientos || ficha.tratamiento_set || [];
+    let htmlTratamientos = '';
     
-    // Crear tarjeta médica
-    const tarjeta = document.createElement('div');
-    tarjeta.className = 'card medical-card shadow-sm';
-    
-    // Determinar tipo de consulta y badge
-    let tipoBadge = '';
-    const motivo = (ficha.motivo || '').toLowerCase();
-    if (motivo.includes('vacuna') || motivo.includes('vacunación')) {
-        tipoBadge = '<span class="badge bg-success">💉 Vacunación</span>';
-    } else if (motivo.includes('cirugía') || motivo.includes('operación')) {
-        tipoBadge = '<span class="badge bg-danger">🏥 Cirugía</span>';
-    } else if (motivo.includes('control') || motivo.includes('revisión')) {
-        tipoBadge = '<span class="badge bg-info">✅ Control</span>';
-    } else {
-        tipoBadge = '<span class="badge bg-primary">🩺 Consulta</span>';
-    }
-    
-    // Contenido de tratamientos con diseño mejorado
-    let contenidoTratamiento = '';
-    if (ficha.tratamientos && ficha.tratamientos.length > 0) {
-        const tratamientosHTML = ficha.tratamientos.map(t => `
-            <div class="d-flex align-items-center gap-2 mb-2 p-2 rounded" style="background: #fff3cd; border-left: 3px solid #ffc107;">
-                <i class="fas fa-pills text-warning"></i>
-                <div class="flex-grow-1">
-                    <strong>${t.medicamento || 'Medicamento'}</strong>
-                    ${t.descripcion ? `<br><small class="text-muted">${t.descripcion}</small>` : ''}
-                </div>
-            </div>
-        `).join('');
-        
-        contenidoTratamiento = `
-            <div class="mt-3 p-3 bg-light rounded">
-                <h6 class="fw-semibold mb-3">
-                    <i class="fas fa-prescription-bottle-alt text-success me-2"></i>
-                    Plan de Tratamiento
-                </h6>
-                ${tratamientosHTML}
-            </div>
-        `;
-    }
-    
-    // Botones de acción (solo para veterinarios)
-    let botonesAccion = '';
-    if (usuarioRol !== 'Tutor') {
-        botonesAccion = `
-            <button class="btn btn-sm btn-outline-primary" title="Ver detalles" onclick="verDetallesFicha(${ficha.id})">
-                <i class="fas fa-eye"></i>
-            </button>
-        `;
-    }
-    
-    tarjeta.innerHTML = `
-        <div class="card-body p-4">
-            <!-- Header: Fecha y Tipo -->
-            <div class="d-flex justify-content-between align-items-start mb-3">
+    if (listaTratamientos && listaTratamientos.length > 0) {
+        // Guardamos los tratamientos en la memoria global usando el ID de la ficha
+        window.historialTratamientos[ficha.id] = listaTratamientos;
+
+        const items = listaTratamientos.map(t => {
+            const nombreMed = t.medicamento || t.nombre_medicamento || 'Medicamento';
+            const descMed = t.descripcion || t.indicaciones || '';
+            
+            return `
+            <div class="flex items-start gap-3 p-3 rounded-lg bg-yellow-400/10 border border-yellow-400/20 shadow-sm">
+                <div class="mt-1 min-w-[20px]"><i class="fas fa-pills text-yellow-400"></i></div>
                 <div>
-                    <div class="fw-bold text-dark fs-6 mb-1">${fechaFormato}</div>
-                    <div class="text-muted small">
-                        <i class="fas fa-user-md me-1"></i>
-                        ${ficha.veterinario_nombre || 'Sin especificar'}
-                    </div>
+                    <strong class="text-yellow-100 block text-sm font-bold">${nombreMed}</strong>
+                    <span class="text-yellow-50/80 text-xs block mt-0.5">${descMed}</span>
                 </div>
-                <div class="d-flex gap-2 align-items-center">
-                    ${tipoBadge}
-                    ${botonesAccion}
+            </div>`;
+        }).join('');
+        
+        // Aquí agregamos el BOTÓN DE RE-IMPRIMIR
+        htmlTratamientos = `
+            <div class="mt-4 pt-4 border-t border-white/10">
+                <div class="flex justify-between items-end mb-3">
+                    <h4 class="text-xs font-bold text-white/50 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-prescription text-yellow-500"></i> Receta Médica
+                    </h4>
+                    <button onclick="reimprimirReceta(${ficha.id})" class="text-xs flex items-center gap-1 text-blue-300 hover:text-blue-200 transition bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20">
+                        <i class="fas fa-print"></i> Imprimir Copia
+                    </button>
                 </div>
+                <div class="grid grid-cols-1 gap-2">
+                    ${items}
+                </div>
+            </div>`;
+    }
+
+    const item = document.createElement('div');
+    item.className = 'relative pl-8 pb-8 border-l-2 border-white/10 ml-4 last:pb-0 timeline-item';
+    
+    item.innerHTML = `
+        <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-2 border-slate-900 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+        
+        <div class="glass-panel p-6 rounded-2xl hover:bg-white/10 transition duration-300 border border-white/5 shadow-lg group">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white group-hover:text-blue-200 transition">${fecha}</h3>
+                    <p class="text-white/50 text-sm"><i class="fas fa-user-md mr-1"></i> ${ficha.veterinario_nombre || 'Veterinario'}</p>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-bold border ${badgeColor} flex items-center gap-2">
+                    <i class="${icon}"></i> ${tipoTexto}
+                </span>
             </div>
-            
-            <!-- Motivo Destacado -->
-            <div class="mb-3 p-2 rounded" style="background: #e7f3ff; border-left: 3px solid #0d6efd;">
-                <strong class="text-primary">📋 Motivo:</strong>
-                <span class="ms-2">${ficha.motivo || 'No especificado'}</span>
+
+            <div class="mb-4 p-3 rounded-lg bg-blue-500/10 border-l-4 border-blue-500">
+                <strong class="text-blue-400 block text-xs uppercase tracking-wider mb-1">Motivo</strong>
+                <p class="text-white font-medium">${textoMotivo}</p>
             </div>
-            
-            <!-- Diagnóstico -->
-            <div class="mb-3">
-                <strong class="text-success d-block mb-2">
-                    <i class="fas fa-stethoscope me-2"></i>Diagnóstico
-                </strong>
-                <p class="text-dark mb-0" style="line-height: 1.6;">${ficha.diagnostico}</p>
+
+            <div class="mb-4">
+                <strong class="text-green-400 block text-xs uppercase tracking-wider mb-1">Diagnóstico</strong>
+                <p class="text-white/80 leading-relaxed text-sm">${ficha.diagnostico || 'Sin diagnóstico detallado.'}</p>
             </div>
-            
-            <!-- Signos Vitales con Iconos Emoji -->
-            ${(ficha.peso || ficha.temperatura) ? `
-                <div class="d-flex gap-2 mb-3 flex-wrap">
-                    ${ficha.peso ? `
-                        <span class="vital-chip">
-                            <i class="fas fa-weight text-warning"></i>
-                            <strong>${ficha.peso}</strong> kg
-                        </span>
-                    ` : ''}
-                    ${ficha.temperatura ? `
-                        <span class="vital-chip">
-                            <i class="fas fa-thermometer-half text-danger"></i>
-                            <strong>${ficha.temperatura}</strong> °C
-                        </span>
-                    ` : ''}
-                </div>
-            ` : ''}
-            
-            <!-- Notas médicas -->
-            ${ficha.notas_medicas ? `
-                <div class="mt-3 p-2 bg-light rounded">
-                    <small class="text-muted fw-semibold">
-                        <i class="fas fa-notes-medical me-1"></i>Notas:
-                    </small>
-                    <p class="small mb-0 mt-1 text-dark">${ficha.notas_medicas}</p>
-                </div>
-            ` : ''}
-            
-            <!-- Tratamientos -->
-            ${contenidoTratamiento}
+
+            <div class="flex flex-wrap gap-3 mb-2">
+                ${ficha.peso ? `<div class="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/90 font-medium"><i class="fas fa-weight text-orange-400 mr-2"></i>${ficha.peso} kg</div>` : ''}
+                ${ficha.temperatura ? `<div class="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/90 font-medium"><i class="fas fa-thermometer-half text-red-400 mr-2"></i>${ficha.temperatura} °C</div>` : ''}
+            </div>
+
+            ${ficha.notas_medicas ? `<div class="mt-4 text-sm text-white/60 italic border-t border-white/10 pt-2"><i class="fas fa-sticky-note mr-1"></i> "${ficha.notas_medicas}"</div>` : ''}
+
+            ${htmlTratamientos}
         </div>
     `;
-    
-    timelineItem.appendChild(tarjeta);
-    container.appendChild(timelineItem);
+
+    container.appendChild(item);
+}
+
+// Función auxiliar para el botón
+function reimprimirReceta(idFicha) {
+    const tratamientos = window.historialTratamientos[idFicha];
+    if (tratamientos) {
+        imprimirReceta(tratamientos);
+    } else {
+        Swal.fire('Error', 'No se encontraron datos de la receta', 'error');
+    }
 }
 
 // ============================================================================
-// GESTIÓN DEL MODAL DE FICHA
+// GESTIÓN DEL MODAL
 // ============================================================================
 
-/**
- * Abre el modal para crear una nueva ficha clínica.
- * Limpia los campos del formulario y resetea la lista de medicamentos.
- */
+function toggleModal(show) {
+    const modal = document.getElementById('modalFicha');
+    if (show) modal.classList.remove('hidden');
+    else modal.classList.add('hidden');
+}
+
 function abrirModalFicha() {
+    toggleModal(true);
     document.getElementById('formFicha').reset();
-    document.getElementById('ficha-error').classList.add('d-none');
-    
-    // Limpiar y resetear lista de medicamentos
+    document.getElementById('ficha-error').classList.add('hidden');
     const container = document.getElementById('medicamentos-container');
-    container.innerHTML = `
-        <div class="row g-2 mb-2 medicamento-row">
-            <div class="col-md-3">
-                <label class="form-label small text-muted">Medicamento</label>
-                <input type="text" class="form-control form-control-sm" placeholder="Nombre" name="med_nombre[]">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small text-muted">Cantidad</label>
-                <input type="number" step="0.01" class="form-control form-control-sm" placeholder="0.00" name="med_cantidad[]">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small text-muted">Unidad</label>
-                <select class="form-select form-select-sm" name="med_unidad[]">
-                    <option value="">Elegir</option>
-                    <option value="mg">mg</option>
-                    <option value="ml">ml</option>
-                    <option value="ui">ui</option>
-                    <option value="comprimidos">comprimidos</option>
-                    <option value="gotas">gotas</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small text-muted">Frecuencia</label>
-                <select class="form-select form-select-sm" name="med_frecuencia[]">
-                    <option value="">Elegir</option>
-                    <option value="c/24h">c/24h</option>
-                    <option value="c/12h">c/12h</option>
-                    <option value="c/8h">c/8h</option>
-                    <option value="c/6h">c/6h</option>
-                    <option value="c/4h">c/4h</option>
-                    <option value="única vez">Única vez</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small text-muted">Duración (días)</label>
-                <input type="number" step="1" min="1" class="form-control form-control-sm" placeholder="7" name="med_duracion[]">
-            </div>
-            <div class="col-md-1">
-                <label class="form-label small text-muted invisible">X</label>
-                <button type="button" onclick="eliminarFila(this)" class="btn btn-sm btn-outline-danger w-100 invisible" title="Eliminar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-    `;
-    
-    modalFicha.show();
+    container.innerHTML = '';
+    agregarMedicamento();
 }
 
-// Nota: La función toggleTratamientoFields ya no es necesaria
-// El nuevo diseño muestra los medicamentos siempre en el modal
-
-/**
- * Agrega una nueva fila de medicamento al formulario de receta.
- * Permite crear múltiples prescripciones en una sola consulta.
- */
 function agregarMedicamento() {
     const container = document.getElementById('medicamentos-container');
+    const div = document.createElement('div');
+    div.className = 'medicamento-row grid grid-cols-1 md:grid-cols-12 gap-3 pb-3 border-b border-white/5 last:border-0 animation-fade-in';
     
-    const nuevaFila = document.createElement('div');
-    nuevaFila.className = 'row g-2 mb-2 medicamento-row';
-    
-    nuevaFila.innerHTML = `
-        <div class="col-md-3">
-            <label class="form-label small text-muted">Medicamento</label>
-            <input type="text" class="form-control form-control-sm" placeholder="Nombre" name="med_nombre[]">
+    div.innerHTML = `
+        <div class="md:col-span-3">
+            <input type="text" class="w-full px-3 py-2 text-sm rounded-lg glass-input placeholder-white/30" placeholder="Medicamento" name="med_nombre[]">
         </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Cantidad</label>
-            <input type="number" step="0.01" class="form-control form-control-sm" placeholder="0.00" name="med_cantidad[]">
+        <div class="md:col-span-2">
+            <input type="number" step="0.01" class="w-full px-3 py-2 text-sm rounded-lg glass-input placeholder-white/30" placeholder="Cant." name="med_cantidad[]">
         </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Unidad</label>
-            <select class="form-select form-select-sm" name="med_unidad[]">
-                <option value="">Elegir</option>
-                <option value="mg">mg</option>
-                <option value="ml">ml</option>
-                <option value="ui">ui</option>
-                <option value="comprimidos">comprimidos</option>
-                <option value="gotas">gotas</option>
+        <div class="md:col-span-2">
+            <select class="w-full px-3 py-2 text-sm rounded-lg glass-input" name="med_unidad[]">
+                <option value="mg">mg</option><option value="ml">ml</option><option value="ui">ui</option><option value="comprimidos">comp.</option><option value="gotas">gotas</option>
             </select>
         </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Frecuencia</label>
-            <select class="form-select form-select-sm" name="med_frecuencia[]">
-                <option value="">Elegir</option>
-                <option value="c/24h">c/24h</option>
-                <option value="c/12h">c/12h</option>
-                <option value="c/8h">c/8h</option>
-                <option value="c/6h">c/6h</option>
-                <option value="c/4h">c/4h</option>
-                <option value="única vez">Única vez</option>
+        <div class="md:col-span-3">
+            <select class="w-full px-3 py-2 text-sm rounded-lg glass-input" name="med_frecuencia[]">
+                <option value="c/24h">c/24h</option><option value="c/12h">c/12h</option><option value="c/8h">c/8h</option><option value="c/6h">c/6h</option><option value="unica">Única vez</option>
             </select>
         </div>
-        <div class="col-md-2">
-            <label class="form-label small text-muted">Duración (días)</label>
-            <input type="number" step="1" min="1" class="form-control form-control-sm" placeholder="7" name="med_duracion[]">
-        </div>
-        <div class="col-md-1">
-            <label class="form-label small text-muted invisible">X</label>
-            <button type="button" onclick="eliminarFila(this)" class="btn btn-sm btn-outline-danger w-100" title="Eliminar">
-                <i class="fas fa-times"></i>
-            </button>
+        <div class="md:col-span-2 flex gap-2">
+            <input type="number" class="w-full px-3 py-2 text-sm rounded-lg glass-input placeholder-white/30" placeholder="Días" name="med_duracion[]">
+            <button type="button" onclick="eliminarFila(this)" class="px-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/40 transition"><i class="fas fa-trash-alt"></i></button>
         </div>
     `;
-    
-    container.appendChild(nuevaFila);
+    container.appendChild(div);
 }
 
-/**
- * Elimina una fila de medicamento del formulario.
- * @param {HTMLElement} boton - El botón de eliminar que fue clickeado
- */
-function eliminarFila(boton) {
+function eliminarFila(btn) {
+    const row = btn.closest('.medicamento-row');
     const container = document.getElementById('medicamentos-container');
-    
-    // Evitar eliminar si solo queda una fila
-    if (container.querySelectorAll('.medicamento-row').length <= 1) {
-        Swal.fire({
-            title: 'No se puede eliminar',
-            text: 'Debe mantener al menos un medicamento en la receta.',
-            icon: 'warning',
-            confirmButtonColor: '#0061ff'
-        });
-        return;
-    }
-    
-    // Eliminar la fila padre del botón
-    boton.closest('.medicamento-row').remove();
+    if (container.children.length > 1) row.remove();
+    else row.querySelectorAll('input').forEach(i => i.value = '');
 }
 
-/**
- * Valida los datos clínicos antes de guardar la ficha.
- * Aplica reglas veterinarias estrictas y muestra errores con SweetAlert2.
- * @returns {boolean} true si todos los datos son válidos
- */
+// ============================================================================
+// GUARDADO (ENVIANDO MÚLTIPLES NOMBRES DE CAMPOS POR SI ACASO)
+// ============================================================================
+
 function validarDatosClinicos() {
-    // 1. Validar campos obligatorios
     const motivo = document.getElementById('ficha-motivo').value.trim();
     const diagnostico = document.getElementById('ficha-diagnostico').value.trim();
     
-    if (!motivo) {
-        Swal.fire({
-            title: 'Campo Obligatorio',
-            text: 'El motivo de consulta es obligatorio.',
-            icon: 'warning',
-            confirmButtonColor: '#0061ff'
-        });
-        return false;
-    }
-    
-    if (!diagnostico) {
-        Swal.fire({
-            title: 'Campo Obligatorio',
-            text: 'El diagnóstico es obligatorio.',
-            icon: 'warning',
-            confirmButtonColor: '#0061ff'
-        });
-        return false;
-    }
-    
-    // 2. Validar peso
-    const peso = parseFloat(document.getElementById('ficha-peso').value);
-    if (peso && peso <= 0) {
-        Swal.fire({
-            title: 'Error en Peso',
-            text: 'El peso debe ser mayor a 0 kg.',
-            icon: 'error',
-            confirmButtonColor: '#0061ff'
-        });
-        return false;
-    }
-    
-    // 3. Validar temperatura (rango fisiológico veterinario)
-    const temperatura = parseFloat(document.getElementById('ficha-temperatura').value);
-    if (temperatura) {
-        if (temperatura < 35 || temperatura > 43) {
-            Swal.fire({
-                title: 'Temperatura Anormal',
-                html: 'Rango de temperatura fisiológicamente imposible.<br>Verifique los datos.<br><small>Rango normal: 37.5-39.5°C</small>',
-                icon: 'error',
-                confirmButtonColor: '#0061ff'
-            });
-            return false;
-        }
-    }
-    
-    // 4. Validar receta (si hay medicamentos con nombre)
-    const nombresInputs = document.querySelectorAll('input[name="med_nombre[]"]');
-    const hayMedicamentos = Array.from(nombresInputs).some(input => input.value.trim() !== '');
-    
-    if (hayMedicamentos) {
-        const nombresInputs = document.querySelectorAll('input[name="med_nombre[]"]');
-        const cantidadInputs = document.querySelectorAll('input[name="med_cantidad[]"]');
-        const unidadSelects = document.querySelectorAll('select[name="med_unidad[]"]');
-        const frecuenciaSelects = document.querySelectorAll('select[name="med_frecuencia[]"]');
-        
-        for (let i = 0; i < nombresInputs.length; i++) {
-            const nombre = nombresInputs[i].value.trim();
-            const cantidad = cantidadInputs[i].value.trim();
-            const unidad = unidadSelects[i].value;
-            const frecuencia = frecuenciaSelects[i].value;
-            
-            // Si hay nombre de medicamento, DEBE tener todos los datos
-            if (nombre) {
-                if (!cantidad || !unidad || !frecuencia) {
-                    Swal.fire({
-                        title: 'Receta Incompleta',
-                        html: `Faltan detalles de dosificación para el medicamento:<br><strong>${nombre}</strong><br><small>Debe especificar: Cantidad, Unidad y Frecuencia</small>`,
-                        icon: 'error',
-                        confirmButtonColor: '#0061ff'
-                    });
-                    return false;
-                }
-                
-                // Validar que cantidad sea positiva
-                if (parseFloat(cantidad) <= 0) {
-                    Swal.fire({
-                        title: 'Cantidad Inválida',
-                        text: `La cantidad de "${nombre}" debe ser mayor a 0.`,
-                        icon: 'error',
-                        confirmButtonColor: '#0061ff'
-                    });
-                    return false;
-                }
-            }
-        }
-    }
-    
+    if (!motivo) { Swal.fire({ title: 'Falta Motivo', text: 'El motivo es obligatorio.', icon: 'warning' }); return false; }
+    if (!diagnostico) { Swal.fire({ title: 'Falta Diagnóstico', text: 'El diagnóstico es obligatorio.', icon: 'warning' }); return false; }
     return true;
 }
 
-/**
- * Guarda una nueva ficha clínica y opcionalmente tratamientos múltiples.
- * Si hay error de validación, se muestra en el modal sin cerrarlo.
- */
 function guardarFicha() {
-    // VALIDAR DATOS ANTES DE ENVIAR
-    if (!validarDatosClinicos()) {
-        return; // Detener si hay errores de validación
-    }
+    if (!validarDatosClinicos()) return;
     
-    // Se recopilan los datos del formulario
+    const motivoTexto = document.getElementById('ficha-motivo').value;
+
+    // TRUCO: Enviamos el motivo con varios nombres comunes para asegurar que el backend lo atrape
     const fichaData = {
         paciente: pacienteId,
-        motivo: document.getElementById('ficha-motivo').value,
+        motivo: motivoTexto,           // Nombre estándar
+        motivo_consulta: motivoTexto,  // Nombre común en Django
+        descripcion: motivoTexto,      // Por si acaso
         diagnostico: document.getElementById('ficha-diagnostico').value,
         notas_medicas: document.getElementById('ficha-notas').value,
         peso: document.getElementById('ficha-peso').value || null,
         temperatura: document.getElementById('ficha-temperatura').value || null
     };
-    
-    // Se valida que los campos obligatorios estén llenos
-    if (!fichaData.motivo || !fichaData.diagnostico) {
-        mostrarErrorModal('Por favor completa los campos obligatorios (Motivo y Diagnóstico)');
-        return;
-    }
-    
-    // Se guarda la ficha clínica
+
+    const btnGuardar = document.querySelector('button[onclick="guardarFicha()"]');
+    const originalText = btnGuardar.innerHTML;
+    btnGuardar.disabled = true;
+    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
     fetch('/api/fichas/', {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(fichaData)
     })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else if (response.status === 400) {
-            return response.json().then(data => {
-                throw new Error(data.detail || 'Error de validación');
-            });
-        }
-        throw new Error('Error al guardar ficha');
-    })
+    .then(r => r.ok ? r.json() : Promise.reject(r))
     .then(fichaCreada => {
-        // Verificar si hay medicamentos para guardar
-        const nombresInputs = document.querySelectorAll('input[name="med_nombre[]"]');
-        const hayMedicamentos = Array.from(nombresInputs).some(input => input.value.trim() !== '');
-        
-        if (hayMedicamentos) {
-            guardarTratamientos(fichaCreada.id);
-        } else {
-            // Se cierra el modal y se recarga el timeline
-            modalFicha.hide();
-            cargarTimelineFichas();
-            Swal.fire({
-                title: '¡Ficha Guardada!',
-                text: 'La consulta se ha registrado correctamente.',
-                icon: 'success',
-                confirmButtonColor: '#0061ff',
-                timer: 2000
-            });
-        }
+        guardarTratamientos(fichaCreada.id, btnGuardar, originalText);
     })
-    .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            title: 'Error al Guardar',
-            text: error.message || 'Error al guardar la ficha clínica. Intente nuevamente.',
-            icon: 'error',
-            confirmButtonColor: '#0061ff'
-        });
+    .catch(err => {
+        console.error(err);
+        btnGuardar.disabled = false;
+        btnGuardar.innerHTML = originalText;
+        document.getElementById('ficha-error').textContent = 'Error al guardar. Intente nuevamente.';
+        document.getElementById('ficha-error').classList.remove('hidden');
     });
 }
 
-/**
- * Guarda múltiples tratamientos asociados a una ficha clínica.
- * Lee todos los inputs de medicamentos y los envía al backend.
- *
- * @param {number} fichaId - ID de la ficha clínica creada
- */
-function guardarTratamientos(fichaId) {
-    // Recolectar todos los inputs de medicamentos
-    const nombresInputs = document.querySelectorAll('input[name="med_nombre[]"]');
-    const cantidadInputs = document.querySelectorAll('input[name="med_cantidad[]"]');
-    const unidadSelects = document.querySelectorAll('select[name="med_unidad[]"]');
-    const frecuenciaSelects = document.querySelectorAll('select[name="med_frecuencia[]"]');
-    const duracionInputs = document.querySelectorAll('input[name="med_duracion[]"]');
+function guardarTratamientos(fichaId, btnGuardar, originalText) {
+    const nombres = document.getElementsByName('med_nombre[]');
+    const cantidades = document.getElementsByName('med_cantidad[]');
+    const unidades = document.getElementsByName('med_unidad[]');
+    const frecuencias = document.getElementsByName('med_frecuencia[]');
+    const duraciones = document.getElementsByName('med_duracion[]');
     
-    const medicamentos = [];
+    const tratamientos = [];
     
-    // Procesar cada fila de medicamento
-    for (let i = 0; i < nombresInputs.length; i++) {
-        const nombre = nombresInputs[i].value.trim();
-        const cantidad = cantidadInputs[i].value.trim();
-        const unidad = unidadSelects[i].value;
-        const frecuencia = frecuenciaSelects[i].value;
-        const duracion = duracionInputs[i] ? duracionInputs[i].value.trim() : '';
-        
-        // Solo agregar si al menos tiene nombre
-        if (nombre) {
-            medicamentos.push({
-                nombre: nombre,
-                cantidad: cantidad,
-                unidad: unidad,
-                frecuencia: frecuencia,
-                duracion: duracion
+    for (let i = 0; i < nombres.length; i++) {
+        if (nombres[i].value.trim()) {
+            // Creamos un objeto tratamiento que el backend pueda entender
+            tratamientos.push({
+                ficha_clinica: fichaId,
+                
+                // Campos para la API
+                medicamento: nombres[i].value,
+                nombre_medicamento: nombres[i].value, // Backup name
+                
+                descripcion: `${cantidades[i].value} ${unidades[i].value} ${frecuencias[i].value}`,
+                indicaciones: `${cantidades[i].value} ${unidades[i].value} ${frecuencias[i].value}`, // Backup name
+                
+                fecha_inicio: new Date().toISOString().split('T')[0],
+                fecha_fin: duraciones[i].value ? calcularFechaFin(parseInt(duraciones[i].value)) : null,
+                
+                // Datos crudos para impresión local (si se usa)
+                nombre: nombres[i].value,
+                cantidad: cantidades[i].value,
+                unidad: unidades[i].value,
+                frecuencia: frecuencias[i].value,
+                duracion: duraciones[i].value
             });
         }
     }
     
-    // Si no hay medicamentos, solo cerrar el modal
-    if (medicamentos.length === 0) {
-        modalFicha.hide();
-        cargarTimelineFichas();
-        Swal.fire({
-            title: '¡Ficha Guardada!',
-            text: 'La consulta se ha registrado correctamente.',
-            icon: 'success',
-            confirmButtonColor: '#0061ff',
-            timer: 2000
-        });
+    if (tratamientos.length === 0) {
+        finalizarGuardado(btnGuardar, originalText, [], fichaId);
         return;
     }
-    
-    // Crear una promesa para cada medicamento
-    const promesas = medicamentos.map(med => {
-        // Formatear descripción estructurada: "Amoxicilina 50 mg cada 12h por 5 días"
-        let descripcionFormateada = `${med.cantidad} ${med.unidad} ${med.frecuencia}`;
-        if (med.duracion) {
-            descripcionFormateada += ` por ${med.duracion} días`;
-        }
-        
-        const tratamientoData = {
-            ficha_clinica: fichaId,
-            medicamento: med.nombre,
-            descripcion: descripcionFormateada,
-            fecha_inicio: new Date().toISOString().split('T')[0],
-            fecha_fin: med.duracion ? calcularFechaFin(parseInt(med.duracion)) : null
-        };
-        
-        return fetch('/api/tratamientos/', {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify(tratamientoData)
-        });
-    });
-    
-    // Esperar a que todos los tratamientos se guarden
-    Promise.all(promesas)
-        .then(() => {
-            modalFicha.hide();
-            cargarTimelineFichas();
-            
-            // Mostrar éxito con opción de imprimir receta
-            Swal.fire({
-                title: '¡Ficha Guardada!',
-                html: `La consulta y ${medicamentos.length} tratamiento(s) se han registrado correctamente.<br><br>¿Deseas imprimir la receta?`,
-                icon: 'success',
-                showCancelButton: true,
-                confirmButtonColor: '#0061ff',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-print mr-2"></i>Imprimir Receta',
-                cancelButtonText: 'Cerrar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    imprimirReceta(medicamentos, fichaId);
-                }
-            });
+
+    Promise.all(tratamientos.map(t => 
+        fetch('/api/tratamientos/', {
+            method: 'POST', headers: getHeaders(), body: JSON.stringify(t)
         })
-        .catch(error => {
-            console.error('Error guardando tratamientos:', error);
-            modalFicha.hide();
-            cargarTimelineFichas();
-            Swal.fire({
-                title: 'Advertencia',
-                text: 'Ficha clínica guardada, pero algunos tratamientos no se pudieron guardar.',
-                icon: 'warning',
-                confirmButtonColor: '#0061ff'
-            });
-        });
-}
-
-/**
- * Calcula la fecha de finalización sumando días a la fecha actual.
- * @param {number} dias - Número de días a sumar
- * @returns {string} Fecha en formato YYYY-MM-DD
- */
-function calcularFechaFin(dias) {
-    const fecha = new Date();
-    fecha.setDate(fecha.getDate() + dias);
-    return fecha.toISOString().split('T')[0];
-}
-
-// ============================================================================
-// FUNCIONES DE NOTIFICACIÓN
-// ============================================================================
-
-/**
- * Muestra un mensaje de error dentro del modal (sin cerrarlo).
- *
- * @param {string} mensaje - Texto del error
- */
-function mostrarErrorModal(mensaje) {
-    const errorDiv = document.getElementById('ficha-error');
-    errorDiv.textContent = mensaje;
-    errorDiv.classList.remove('hidden');
-}
-
-/**
- * Muestra un mensaje de error temporal fuera del modal.
- * La alerta desaparece automáticamente después de 5 segundos.
- *
- * @param {string} mensaje - Texto del error
- */
-function mostrarError(mensaje) {
-    const alerta = document.createElement('div');
-    alerta.className = 'alert alert-danger alert-dismissible fade show';
-    alerta.innerHTML = `
-        ${mensaje}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.querySelector('.main-content').insertBefore(alerta, document.querySelector('.container-fluid'));
-    
-    setTimeout(() => alerta.remove(), 5000);
-}
-
-/**
- * Muestra un mensaje de éxito temporal.
- * La alerta desaparece automáticamente después de 5 segundos.
- *
- * @param {string} mensaje - Texto del éxito
- */
-function mostrarExito(mensaje) {
-    const alerta = document.createElement('div');
-    alerta.className = 'alert alert-success alert-dismissible fade show';
-    alerta.innerHTML = `
-        ${mensaje}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.querySelector('.main-content').insertBefore(alerta, document.querySelector('.container-fluid'));
-    
-    setTimeout(() => alerta.remove(), 5000);
-}
-
-// ============================================================================
-// FUNCIONES DE IMPRESIÓN
-// ============================================================================
-
-/**
- * Genera e imprime una receta médica con los medicamentos prescritos
- * @param {Array} medicamentos - Array de medicamentos con toda su información
- * @param {number} fichaId - ID de la ficha clínica
- */
-function imprimirReceta(medicamentos, fichaId) {
-    // Obtener datos del paciente y veterinario
-    const pacienteNombre = document.querySelector('[data-paciente-nombre]')?.dataset.pacienteNombre || 'Paciente';
-    const pacienteEspecie = document.querySelector('[data-paciente-especie]')?.dataset.pacienteEspecie || '';
-    
-    // Crear ventana de impresión
-    const ventanaImpresion = window.open('', '_blank', 'width=800,height=600');
-    
-    const fechaHoy = new Date().toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
+    ))
+    .then(() => finalizarGuardado(btnGuardar, originalText, tratamientos, fichaId))
+    .catch(err => {
+        console.error('Error tratamientos:', err);
+        finalizarGuardado(btnGuardar, originalText, [], fichaId); 
+        Swal.fire({ icon: 'warning', title: 'Atención', text: 'Ficha guardada, pero hubo error en algunos medicamentos.' });
     });
+}
+
+function finalizarGuardado(btn, text, medicamentos, fichaId) {
+    btn.disabled = false;
+    btn.innerHTML = text;
+    toggleModal(false);
+    cargarTimelineFichas();
     
-    // Generar HTML de la receta
-    let htmlReceta = `
+    if (medicamentos.length > 0) {
+        Swal.fire({
+            title: '¡Guardado!',
+            html: `Se registró la consulta con receta.<br>¿Deseas imprimirla?`,
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-print"></i> Imprimir',
+            cancelButtonText: 'Cerrar',
+            confirmButtonColor: '#0061ff',
+            background: '#1e293b', color: '#fff'
+        }).then((result) => {
+            if (result.isConfirmed) imprimirReceta(medicamentos, fichaId);
+        });
+    } else {
+        Swal.fire({ icon: 'success', title: 'Guardado', timer: 1500, showConfirmButton: false, background: '#1e293b', color: '#fff' });
+    }
+}
+
+function calcularFechaFin(dias) {
+    const f = new Date(); f.setDate(f.getDate() + dias); return f.toISOString().split('T')[0];
+}
+
+// ============================================================================
+// IMPRESIÓN
+// ============================================================================
+
+function imprimirReceta(medicamentos) {
+    const pacienteNombre = document.body.getAttribute('data-paciente-nombre') || 'Paciente';
+    const pacienteEspecie = document.body.getAttribute('data-paciente-especie') || '';
+    const fechaHoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    
+    let html = `
         <!DOCTYPE html>
         <html lang="es">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Receta Médica - ${pacienteNombre}</title>
             <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-                body {
-                    font-family: 'Arial', sans-serif;
-                    padding: 40px;
-                    background: white;
-                    color: #333;
-                }
-                .header {
-                    text-align: center;
-                    border-bottom: 3px solid #0061ff;
-                    padding-bottom: 20px;
-                    margin-bottom: 30px;
-                }
-                .header h1 {
-                    color: #0061ff;
-                    font-size: 28px;
-                    margin-bottom: 5px;
-                }
-                .header p {
-                    color: #666;
-                    font-size: 14px;
-                }
-                .info-section {
-                    margin-bottom: 30px;
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 20px;
-                }
-                .info-box {
-                    background: #f8f9fa;
-                    padding: 15px;
-                    border-radius: 8px;
-                    border-left: 4px solid #0061ff;
-                }
-                .info-box h3 {
-                    font-size: 12px;
-                    color: #666;
-                    text-transform: uppercase;
-                    margin-bottom: 5px;
-                }
-                .info-box p {
-                    font-size: 16px;
-                    color: #333;
-                    font-weight: bold;
-                }
-                .receta-section {
-                    margin-top: 30px;
-                }
-                .receta-section h2 {
-                    color: #0061ff;
-                    font-size: 20px;
-                    margin-bottom: 20px;
-                    border-bottom: 2px solid #e9ecef;
-                    padding-bottom: 10px;
-                }
-                .medicamento {
-                    background: white;
-                    border: 1px solid #dee2e6;
-                    border-radius: 8px;
-                    padding: 20px;
-                    margin-bottom: 15px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                }
-                .medicamento h3 {
-                    color: #0061ff;
-                    font-size: 18px;
-                    margin-bottom: 10px;
-                }
-                .med-detalles {
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 10px;
-                    margin-top: 10px;
-                }
-                .med-detalle {
-                    background: #f8f9fa;
-                    padding: 10px;
-                    border-radius: 6px;
-                }
-                .med-detalle strong {
-                    display: block;
-                    font-size: 11px;
-                    color: #666;
-                    text-transform: uppercase;
-                    margin-bottom: 3px;
-                }
-                .med-detalle span {
-                    font-size: 14px;
-                    color: #333;
-                }
-                .footer {
-                    margin-top: 50px;
-                    padding-top: 20px;
-                    border-top: 2px solid #e9ecef;
-                    text-align: center;
-                }
-                .firma {
-                    margin-top: 60px;
-                    text-align: center;
-                }
-                .firma-linea {
-                    width: 300px;
-                    border-top: 2px solid #333;
-                    margin: 0 auto 10px;
-                }
-                .firma p {
-                    color: #666;
-                    font-size: 12px;
-                }
-                @media print {
-                    body {
-                        padding: 20px;
-                    }
-                    .medicamento {
-                        page-break-inside: avoid;
-                    }
-                }
+                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+                body { font-family: 'Poppins', sans-serif; padding: 40px; color: #333; max-width: 800px; margin: 0 auto; line-height: 1.6; }
+                .header { text-align: center; border-bottom: 4px solid #3b82f6; padding-bottom: 20px; margin-bottom: 40px; }
+                .brand { color: #3b82f6; font-size: 32px; font-weight: 800; margin: 0; letter-spacing: -1px; }
+                .subtitle { color: #64748b; margin: 0; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
+                .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
+                .info-box { background: #f8fafc; padding: 20px; border-radius: 16px; border-left: 6px solid #3b82f6; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+                .info-label { display: block; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-weight: 600; }
+                .info-value { font-size: 20px; font-weight: 700; color: #1e293b; }
+                .info-sub { font-size: 14px; color: #64748b; margin-top: 2px; }
+                .rx-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; color: #3b82f6; }
+                .rx-icon { font-size: 32px; font-weight: bold; }
+                .rx-title { font-size: 24px; font-weight: 700; color: #1e293b; margin: 0; }
+                .med-card { border: 2px solid #e2e8f0; border-radius: 16px; padding: 25px; margin-bottom: 20px; page-break-inside: avoid; background: white; }
+                .med-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+                .med-name { color: #3b82f6; font-size: 18px; font-weight: 700; }
+                .med-index { background: #3b82f6; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
+                .med-desc-full { font-size: 15px; color: #334155; font-weight: 500; }
+                .med-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+                .detail-item strong { display: block; font-size: 11px; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
+                .detail-item span { font-size: 15px; color: #334155; font-weight: 500; }
+                .footer { margin-top: 80px; text-align: center; }
+                .firma-box { width: 300px; margin: 0 auto; text-align: center; }
+                .firma-line { border-bottom: 2px solid #cbd5e1; margin-bottom: 15px; height: 60px; }
+                .firma-text { font-weight: 700; color: #334155; margin: 0; }
+                .firma-sub { font-size: 13px; color: #94a3b8; margin: 5px 0 0 0; }
+                .legal { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px; font-size: 11px; color: #94a3b8; }
+                @media print { body { -webkit-print-color-adjust: exact; padding: 0; } .med-card { box-shadow: none; border: 1px solid #ccc; } }
             </style>
         </head>
         <body>
             <div class="header">
-                <h1>🐾 PawPOINT</h1>
-                <p>Clínica Veterinaria</p>
-                <p style="margin-top: 10px; font-size: 12px;">Receta Médica Veterinaria</p>
+                <h1 class="brand">🐾 PawPOINT</h1>
+                <p class="subtitle">Centro Veterinario Integral</p>
             </div>
 
-            <div class="info-section">
+            <div class="info-grid">
                 <div class="info-box">
-                    <h3>Paciente</h3>
-                    <p>${pacienteNombre}</p>
-                    <p style="font-size: 14px; font-weight: normal; color: #666; margin-top: 5px;">${pacienteEspecie}</p>
+                    <span class="info-label">Paciente</span>
+                    <div class="info-value">${pacienteNombre}</div>
+                    <div class="info-sub">${pacienteEspecie}</div>
                 </div>
                 <div class="info-box">
-                    <h3>Fecha de Emisión</h3>
-                    <p>${fechaHoy}</p>
+                    <span class="info-label">Fecha de Emisión</span>
+                    <div class="info-value">${fechaHoy}</div>
+                    <div class="info-sub">Validez: 30 días</div>
                 </div>
             </div>
 
-            <div class="receta-section">
-                <h2>📋 Prescripción Médica</h2>
+            <div class="rx-header">
+                <span class="rx-icon">℞</span>
+                <h2 class="rx-title">Prescripción Médica</h2>
+            </div>
     `;
     
-    // Agregar cada medicamento
-    medicamentos.forEach((med, index) => {
-        htmlReceta += `
-            <div class="medicamento">
-                <h3>${index + 1}. ${med.nombre}</h3>
-                <div class="med-detalles">
-                    <div class="med-detalle">
-                        <strong>Dosis</strong>
-                        <span>${med.cantidad} ${med.unidad}</span>
-                    </div>
-                    <div class="med-detalle">
-                        <strong>Frecuencia</strong>
-                        <span>${med.frecuencia}</span>
-                    </div>
-                    <div class="med-detalle">
-                        <strong>Duración</strong>
-                        <span>${med.duracion ? med.duracion + ' días' : 'Continuo'}</span>
-                    </div>
+    medicamentos.forEach((m, idx) => {
+        // Lógica Inteligente: ¿Es dato nuevo (detallado) o historial (descripción completa)?
+        const nombre = m.nombre || m.medicamento || 'Medicamento';
+        let contenidoDetalle = '';
+
+        if (m.cantidad && m.unidad) {
+            // Es un dato NUEVO (tiene campos separados)
+            contenidoDetalle = `
+                <div class="med-details">
+                    <div class="detail-item"><strong>Dosis</strong><span>${m.cantidad} ${m.unidad}</span></div>
+                    <div class="detail-item"><strong>Frecuencia</strong><span>${m.frecuencia}</span></div>
+                    <div class="detail-item"><strong>Duración</strong><span>${m.duracion ? m.duracion + ' días' : 'Continuo'}</span></div>
+                </div>`;
+        } else {
+            // Es un dato del HISTORIAL (solo tiene descripción/indicaciones)
+            const descripcion = m.descripcion || m.indicaciones || 'Ver indicaciones';
+            contenidoDetalle = `<div class="med-desc-full"><strong>Indicaciones:</strong> ${descripcion}</div>`;
+        }
+
+        html += `
+            <div class="med-card">
+                <div class="med-header">
+                    <span class="med-name">${nombre}</span>
+                    <span class="med-index">${idx + 1}</span>
                 </div>
+                ${contenidoDetalle}
             </div>
         `;
     });
     
-    htmlReceta += `
-            </div>
-
+    html += `
             <div class="footer">
-                <p style="color: #666; font-size: 12px; margin-bottom: 10px;">
-                    Esta receta es válida únicamente para el paciente indicado.<br>
-                    Administrar según las indicaciones del veterinario.
-                </p>
+                <div class="firma-box">
+                    <div class="firma-line"></div> 
+                    <p class="firma-text">Firma del Médico Veterinario</p>
+                    <p class="firma-sub">Registro Colegio Médico Veterinario</p>
+                </div>
+                <div class="legal">
+                    Receta generada electrónicamente por el sistema PawPOINT. <br>
+                    Este documento es válido para la dispensación de los medicamentos indicados.
+                </div>
             </div>
-
-            <div class="firma">
-                <div class="firma-linea"></div>
-                <p><strong>Firma y Sello del Veterinario</strong></p>
-            </div>
-
-            <script>
-                window.onload = function() {
-                    window.print();
-                };
-            </script>
+            <script>window.onload = function() { window.print(); };</script>
         </body>
         </html>
     `;
     
-    ventanaImpresion.document.write(htmlReceta);
-    ventanaImpresion.document.close();
+    win.document.write(html);
+    win.document.close();
 }

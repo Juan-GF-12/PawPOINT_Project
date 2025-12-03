@@ -80,6 +80,7 @@ class FichaClinica(models.Model):
         related_name="fichas_creadas"
     )
     fecha_consulta = models.DateTimeField(auto_now_add=True)
+    motivo = models.CharField(max_length=255, blank=True, null=True)
     diagnostico = models.TextField()
     notas_medicas = models.TextField(blank=True, null=True)
     peso = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)

@@ -236,24 +236,30 @@ class FichaClinicaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filtra fichas clínicas según el rol del usuario autenticado."""
         user = self.request.user
+        queryset = FichaClinica.objects.none()
+
         try:
             rol_usuario = user.profile.rol.nombre
         except AttributeError:
-            return FichaClinica.objects.none()
+            return queryset
         
-        # Staff ve todas las fichas
+        # FILTRO DE SEGURIDAD
         if rol_usuario in ['Veterinario', 'Asistente', 'Administrador']:
-            return FichaClinica.objects.all()
+            queryset = FichaClinica.objects.all()
         
-        # Tutor solo ve fichas de sus mascotas
         elif rol_usuario == 'Tutor':
             try:
                 tutor = Tutor.objects.get(email=user.email)
-                return FichaClinica.objects.filter(paciente__tutor=tutor)
+                queryset = FichaClinica.objects.filter(paciente__tutor=tutor)
             except Tutor.DoesNotExist:
-                return FichaClinica.objects.none()
-        
-        return FichaClinica.objects.none()
+                return queryset
+            
+        #FILTRO DE NAVEGACIÓN
+        paciente_id = self.request.query_params.get('paciente')
+        if paciente_id:
+            queryset = queryset.filter(paciente__id=paciente_id)
+        return queryset
+
     
     def perform_create(self, serializer):
         """Asigna automáticamente el usuario autenticado como veterinario.

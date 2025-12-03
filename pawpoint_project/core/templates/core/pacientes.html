@@ -7,162 +7,39 @@
 {% block content %}
 <div class="flex flex-col h-full space-y-6">
     
-    <!-- Header con Buscador -->
     <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <!-- Buscador -->
         <div class="relative w-full sm:w-96">
             <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50"></i>
             <input type="text" id="search-pacientes" placeholder="Buscar por nombre, especie o tutor..." 
-                   class="w-full pl-12 pr-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition shadow-lg">
+                   class="w-full pl-12 pr-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition shadow-lg text-white">
         </div>
 
-        <!-- Botón Nuevo Paciente -->
-        <button id="btn-nuevo-paciente" class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-blue-600/30 transition transform hover:-translate-y-1 flex items-center gap-2">
+        <button onclick="abrirModalCrear()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-blue-600/30 transition transform hover:-translate-y-1 flex items-center gap-2">
             <i class="fas fa-plus"></i>
             <span>Nuevo Paciente</span>
         </button>
     </div>
 
-    <!-- Formulario Desplegable (Acordeón) -->
-    <div id="formulario-container" class="glass-panel rounded-2xl overflow-hidden transition-all duration-300 ease-in-out" style="max-height: 0; opacity: 0;">
-        <div class="p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h3 id="formulario-titulo" class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                    <i class="fas fa-paw mr-2"></i>Nuevo Paciente
-                </h3>
-                <button id="btn-cerrar-formulario" class="text-white/70 hover:text-white transition">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
-            </div>
-
-            <!-- Alerta de Error -->
-            <div id="form-alert-error" class="hidden bg-red-500/20 border border-red-500/50 text-red-100 p-4 rounded-lg mb-4">
-                <div class="flex items-center gap-2">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <span id="error-message">Error al guardar. Revisa los campos.</span>
-                </div>
-            </div>
-
-            <!-- Formulario -->
-            <form id="paciente-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <input type="hidden" id="paciente-id" value="">
-                
-                <!-- Tutor -->
-                <div class="col-span-2">
-                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
-                        <i class="fas fa-user text-blue-400"></i>
-                        Tutor <span class="text-red-400">*</span>
-                    </label>
-                    <select id="paciente-tutor" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition" required>
-                        <option value="" class="text-gray-800">Seleccione un tutor...</option>
-                    </select>
-                    <span class="error-message hidden text-red-400 text-sm mt-1">Este campo es obligatorio</span>
-                </div>
-
-                <!-- Nombre -->
-                <div>
-                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
-                        <i class="fas fa-paw text-blue-400"></i>
-                        Nombre <span class="text-red-400">*</span>
-                    </label>
-                    <input type="text" id="paciente-nombre" placeholder="Ej: Max" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition" required>
-                    <span class="error-message hidden text-red-400 text-sm mt-1">Este campo es obligatorio</span>
-                </div>
-
-                <!-- Especie -->
-                <div>
-                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
-                        <i class="fas fa-dog text-blue-400"></i>
-                        Especie <span class="text-red-400">*</span>
-                    </label>
-                    <select id="paciente-especie" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition" required>
-                        <option value="" class="text-gray-800">Seleccione...</option>
-                        <option value="Perro" class="text-gray-800">Perro</option>
-                        <option value="Gato" class="text-gray-800">Gato</option>
-                        <option value="Ave" class="text-gray-800">Ave</option>
-                        <option value="Conejo" class="text-gray-800">Conejo</option>
-                        <option value="Reptil" class="text-gray-800">Reptil</option>
-                        <option value="Roedor" class="text-gray-800">Roedor</option>
-                        <option value="Otro" class="text-gray-800">Otro</option>
-                    </select>
-                    <span class="error-message hidden text-red-400 text-sm mt-1">Este campo es obligatorio</span>
-                </div>
-
-                <!-- Raza -->
-                <div>
-                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
-                        <i class="fas fa-dna text-blue-400"></i>
-                        Raza
-                    </label>
-                    <input type="text" id="paciente-raza" placeholder="Ej: Golden Retriever" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition">
-                </div>
-
-                <!-- Género -->
-                <div>
-                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
-                        <i class="fas fa-venus-mars text-blue-400"></i>
-                        Género <span class="text-red-400">*</span>
-                    </label>
-                    <select id="paciente-genero" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition" required>
-                        <option value="" class="text-gray-800">Seleccione...</option>
-                        <option value="M" class="text-gray-800">Macho</option>
-                        <option value="H" class="text-gray-800">Hembra</option>
-                    </select>
-                    <span class="error-message hidden text-red-400 text-sm mt-1">Este campo es obligatorio</span>
-                </div>
-
-                <!-- Fecha Nacimiento -->
-                <div>
-                    <label class="block text-sm font-semibold text-white/90 mb-2 flex items-center gap-2">
-                        <i class="fas fa-birthday-cake text-blue-400"></i>
-                        Fecha de Nacimiento <span class="text-red-400">*</span>
-                    </label>
-                    <input type="date" id="paciente-fecha-nacimiento" class="w-full p-3 rounded-lg glass-input focus:ring-2 focus:ring-blue-400 transition" required>
-                    <span class="error-message hidden text-red-400 text-sm mt-1">Este campo es obligatorio</span>
-                </div>
-
-                <!-- Campo Color/Características removido - no existe en la base de datos -->
-
-                <!-- Botones -->
-                <div class="col-span-2 flex justify-end gap-3 pt-4 border-t border-white/10">
-                    <button type="button" id="btn-cancelar-form" class="px-6 py-3 rounded-lg bg-white/10 hover:bg-white/20 transition text-white font-semibold">
-                        <i class="fas fa-times mr-2"></i>Cancelar
-                    </button>
-                    <button type="submit" id="btn-guardar-paciente" class="px-8 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold shadow-lg transition transform hover:-translate-y-0.5">
-                        <span id="btn-guardar-texto">
-                            <i class="fas fa-save mr-2"></i>Guardar Paciente
-                        </span>
-                        <span id="btn-guardar-spinner" class="hidden">
-                            <i class="fas fa-spinner fa-spin mr-2"></i>Guardando...
-                        </span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Contenedor Tabla Glass -->
-    <div class="glass-panel rounded-2xl overflow-hidden flex-1">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead class="bg-white/10 text-white/80 uppercase text-xs tracking-wider">
+    <div class="glass-panel rounded-2xl overflow-hidden flex-1 relative">
+        <div class="overflow-x-auto h-full">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-white/10 text-white/80 uppercase text-xs tracking-wider sticky top-0 backdrop-blur-md z-10">
                     <tr>
-                        <th class="p-5 font-semibold">ID</th>
-                        <th class="p-5 font-semibold">Paciente</th>
-                        <th class="p-5 font-semibold">Especie</th>
-                        <th class="p-5 font-semibold">Raza</th>
-                        <th class="p-5 font-semibold">Género</th>
-                        <th class="p-5 font-semibold">Edad</th>
-                        <th class="p-5 font-semibold">Tutor</th>
-                        <th class="p-5 font-semibold text-center">Acciones</th>
+                        <th class="p-5 font-semibold border-b border-white/10">ID</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Paciente</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Especie</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Raza</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Género</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Edad</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Tutor</th>
+                        <th class="p-5 font-semibold border-b border-white/10 text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="pacientes-table-body" class="divide-y divide-white/10 text-sm">
-                    <!-- Fila de carga (se reemplaza por JS) -->
                     <tr id="loading-row">
-                        <td colspan="8" class="p-8 text-center text-white/60">
-                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                            <p>Cargando pacientes...</p>
+                        <td colspan="8" class="p-12 text-center text-white/60">
+                            <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
+                            <p>Cargando lista de pacientes...</p>
                         </td>
                     </tr>
                 </tbody>
@@ -170,15 +47,341 @@
         </div>
     </div>
 </div>
+
+<div id="modalPaciente" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-2xl bg-[#0f172a]/95 border border-white/20 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl backdrop-blur-xl">
+                
+                <div class="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-blue-900/40 to-purple-900/40">
+                    <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <i class="fas fa-paw text-blue-400"></i> <span id="modal-titulo">Nuevo Paciente</span>
+                    </h3>
+                    <button type="button" onclick="toggleModal(false)" class="text-white/50 hover:text-white transition focus:outline-none">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+
+                <div class="px-8 py-6">
+                    <div id="form-alert-error" class="hidden bg-red-500/20 border border-red-500/50 text-red-100 p-3 rounded-lg mb-6 flex items-center gap-3">
+                        <i class="fas fa-exclamation-circle text-xl"></i>
+                        <span id="error-message">Error al guardar.</span>
+                    </div>
+
+                    <form id="paciente-form" class="grid grid-cols-1 md:grid-cols-2 gap-6" onsubmit="event.preventDefault(); guardarPaciente();">
+                        <input type="hidden" id="paciente-id" value="">
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Tutor *</label>
+                            <select id="paciente-tutor" class="w-full px-4 py-3 rounded-xl glass-input text-white" required>
+                                <option value="" class="bg-slate-800">Cargando tutores...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Nombre *</label>
+                            <input type="text" id="paciente-nombre" class="w-full px-4 py-3 rounded-xl glass-input placeholder-white/30 text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Especie *</label>
+                            <select id="paciente-especie" class="w-full px-4 py-3 rounded-xl glass-input text-white" required>
+                                <option value="" class="bg-slate-800">Seleccione...</option>
+                                <option value="Perro" class="bg-slate-800">Perro</option>
+                                <option value="Gato" class="bg-slate-800">Gato</option>
+                                <option value="Ave" class="bg-slate-800">Ave</option>
+                                <option value="Conejo" class="bg-slate-800">Conejo</option>
+                                <option value="Reptil" class="bg-slate-800">Reptil</option>
+                                <option value="Roedor" class="bg-slate-800">Roedor</option>
+                                <option value="Otro" class="bg-slate-800">Otro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Raza</label>
+                            <input type="text" id="paciente-raza" class="w-full px-4 py-3 rounded-xl glass-input placeholder-white/30 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Género *</label>
+                            <select id="paciente-genero" class="w-full px-4 py-3 rounded-xl glass-input text-white" required>
+                                <option value="" class="bg-slate-800">Seleccione...</option>
+                                <option value="M" class="bg-slate-800">Macho</option>
+                                <option value="H" class="bg-slate-800">Hembra</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Fecha de Nacimiento *</label>
+                            <input type="date" id="paciente-fecha-nacimiento" class="w-full px-4 py-3 rounded-xl glass-input text-white" required>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="px-6 py-4 border-t border-white/10 flex justify-end gap-3 bg-black/20">
+                    <button type="button" onclick="toggleModal(false)" class="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition">Cancelar</button>
+                    <button type="button" onclick="guardarPaciente()" id="btn-guardar-paciente" class="px-8 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold shadow-lg transition transform hover:-translate-y-0.5">
+                        <span id="btn-guardar-texto"><i class="fas fa-save mr-2"></i>Guardar</span>
+                        <span id="btn-guardar-spinner" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Guardando...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'core/js/pacientes.js' %}"></script>
-<style>
-    /* Asegurar que las opciones de los selects se vean con texto oscuro */
-    select option {
-        color: #1f2937 !important;
-        background-color: white !important;
+<script>
+    // ==========================================
+    // LÓGICA JAVASCRIPT COMPLETA (CRUD)
+    // ==========================================
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        cargarPacientes();
+        
+        // Buscador
+        const searchInput = document.getElementById('search-pacientes');
+        if(searchInput){
+            searchInput.addEventListener('input', function(e) {
+                const term = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll('#pacientes-table-body tr:not(#loading-row)');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(term) ? '' : 'none';
+                });
+            });
+        }
+    });
+
+    function getHeaders() {
+        const token = localStorage.getItem('accessToken');
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        };
     }
+
+    // --- CARGAR LISTA ---
+    function cargarPacientes() {
+        fetch('/api/pacientes/', { headers: getHeaders() })
+        .then(r => r.json())
+        .then(data => {
+            const tbody = document.getElementById('pacientes-table-body');
+            tbody.innerHTML = '';
+            
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-white/60">No hay pacientes registrados.</td></tr>';
+                return;
+            }
+
+            data.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-white/5 transition border-b border-white/5';
+                
+                let icono = '<i class="fas fa-paw"></i>';
+                if(p.especie === 'Perro') icono = '<i class="fas fa-dog"></i>';
+                if(p.especie === 'Gato') icono = '<i class="fas fa-cat"></i>';
+
+                // AQUÍ AGREGAMOS LOS BOTONES DE EDITAR Y ELIMINAR
+                tr.innerHTML = `
+                    <td class="p-5 text-white/50">#${p.id}</td>
+                    <td class="p-5 font-medium text-white flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">${icono}</div>
+                        ${p.nombre}
+                    </td>
+                    <td class="p-5 text-white/80">${p.especie}</td>
+                    <td class="p-5 text-white/70">${p.raza || '-'}</td>
+                    <td class="p-5 text-white/70">${p.genero}</td>
+                    <td class="p-5 text-white/70">${calcularEdad(p.fecha_nacimiento)}</td>
+                    <td class="p-5 text-blue-300">${p.tutor_nombre || 'ID: '+p.tutor}</td>
+                    <td class="p-5 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <a href="/historial/?paciente_id=${p.id}" class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/40 transition" title="Ver Historial">
+                                <i class="fas fa-notes-medical"></i>
+                            </a>
+                            <button onclick="editarPaciente(${p.id})" class="w-8 h-8 flex items-center justify-center rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/40 transition" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="eliminarPaciente(${p.id})" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/40 transition" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(err => console.error("Error cargando pacientes:", err));
+    }
+
+    // --- ELIMINAR ---
+    function eliminarPaciente(id) {
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "Se eliminará el paciente y todo su historial médico. Esta acción no se puede deshacer.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            background: '#1e293b',
+            color: '#fff'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/api/pacientes/${id}/`, {
+                    method: 'DELETE',
+                    headers: getHeaders()
+                })
+                .then(response => {
+                    if (response.ok) {
+                        Swal.fire({
+                            title: 'Eliminado',
+                            text: 'El paciente ha sido eliminado.',
+                            icon: 'success',
+                            background: '#1e293b',
+                            color: '#fff',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        cargarPacientes();
+                    } else {
+                        throw new Error('Error al eliminar');
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'No se pudo eliminar el paciente.',
+                        icon: 'error',
+                        background: '#1e293b',
+                        color: '#fff'
+                    });
+                });
+            }
+        });
+    }
+
+    // --- MODAL Y EDICIÓN ---
+    function cargarTutoresEnSelect(idTutorSeleccionado = null) {
+        return fetch('/api/tutores/', { headers: getHeaders() })
+        .then(r => r.json())
+        .then(tutores => {
+            const select = document.getElementById('paciente-tutor');
+            select.innerHTML = '<option value="" class="bg-slate-800">Seleccione un tutor...</option>';
+            if(tutores && tutores.length > 0){
+                tutores.forEach(t => {
+                    const op = document.createElement('option');
+                    op.value = t.id;
+                    op.textContent = `${t.nombre} ${t.apellido} (${t.rut})`;
+                    op.className = "bg-slate-800";
+                    if (idTutorSeleccionado && t.id == idTutorSeleccionado) op.selected = true;
+                    select.appendChild(op);
+                });
+            }
+        });
+    }
+
+    function toggleModal(show) {
+        const modal = document.getElementById('modalPaciente');
+        if (show) {
+            modal.classList.remove('hidden');
+        } else {
+            modal.classList.add('hidden');
+            document.getElementById('paciente-form').reset();
+            document.getElementById('form-alert-error').classList.add('hidden');
+        }
+    }
+    
+    function abrirModalCrear() { 
+        document.getElementById('modal-titulo').textContent = 'Nuevo Paciente';
+        document.getElementById('paciente-id').value = '';
+        toggleModal(true); 
+        cargarTutoresEnSelect();
+    }
+
+    function editarPaciente(id) {
+        document.getElementById('modal-titulo').textContent = 'Editar Paciente';
+        document.getElementById('paciente-id').value = id;
+        
+        // Cargar datos
+        fetch(`/api/pacientes/${id}/`, { headers: getHeaders() })
+        .then(r => r.json())
+        .then(data => {
+            // Llenar formulario
+            document.getElementById('paciente-nombre').value = data.nombre;
+            document.getElementById('paciente-especie').value = data.especie;
+            document.getElementById('paciente-raza').value = data.raza;
+            document.getElementById('paciente-genero').value = data.genero;
+            document.getElementById('paciente-fecha-nacimiento').value = data.fecha_nacimiento;
+            
+            // Cargar tutores y seleccionar el correcto
+            cargarTutoresEnSelect(data.tutor);
+            
+            toggleModal(true);
+        })
+        .catch(err => console.error("Error cargando paciente:", err));
+    }
+
+    // --- GUARDAR ---
+    function guardarPaciente() {
+        const id = document.getElementById('paciente-id').value;
+        const data = {
+            tutor: document.getElementById('paciente-tutor').value,
+            nombre: document.getElementById('paciente-nombre').value,
+            especie: document.getElementById('paciente-especie').value,
+            raza: document.getElementById('paciente-raza').value,
+            genero: document.getElementById('paciente-genero').value,
+            fecha_nacimiento: document.getElementById('paciente-fecha-nacimiento').value
+        };
+
+        if(!data.tutor || !data.nombre || !data.especie || !data.genero || !data.fecha_nacimiento) {
+            mostrarError('Complete los campos obligatorios');
+            return;
+        }
+
+        const btn = document.getElementById('btn-guardar-paciente');
+        const txt = document.getElementById('btn-guardar-texto');
+        const spin = document.getElementById('btn-guardar-spinner');
+        
+        btn.disabled = true; txt.classList.add('hidden'); spin.classList.remove('hidden');
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/pacientes/${id}/` : '/api/pacientes/';
+
+        fetch(url, {
+            method: method,
+            headers: getHeaders(),
+            body: JSON.stringify(data)
+        })
+        .then(async r => {
+            if(!r.ok) throw await r.json();
+            toggleModal(false);
+            cargarPacientes();
+            Swal.fire({icon: 'success', title: 'Guardado', timer: 1500, showConfirmButton: false, background:'#1e293b', color:'#fff'});
+        })
+        .catch(err => {
+            console.error(err);
+            mostrarError('Error al guardar. Verifique los datos.');
+        })
+        .finally(() => {
+            btn.disabled = false; txt.classList.remove('hidden'); spin.classList.add('hidden');
+        });
+    }
+
+    function mostrarError(msg) {
+        document.getElementById('error-message').textContent = msg;
+        document.getElementById('form-alert-error').classList.remove('hidden');
+    }
+
+    function calcularEdad(fecha) {
+        const diff = new Date() - new Date(fecha);
+        const age = new Date(diff).getUTCFullYear() - 1970;
+        return age + (age === 1 ? ' año' : ' años');
+    }
+</script>
+
+<style>
+    .glass-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; }
+    .glass-input:focus { border-color: #60a5fa; outline: none; background: rgba(255,255,255,0.1); }
+    select option { background: #1e293b; color: white; }
 </style>
 {% endblock %}

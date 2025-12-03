@@ -6,264 +6,289 @@
 
 {% block extra_css %}
 <style>
-    /* Override fondo para esta vista */
-    .main-content {
-        background: #f8f9fa !important;
+    /* =========================================
+       Estilos Específicos para Historial
+       ========================================= */
+
+    /* Tarjetas del Timeline (Glass) */
+    #timeline-container .card, 
+    #timeline-container .medical-card {
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 1rem !important;
+        color: white !important;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
+
+    #timeline-container .card-body { padding: 1.5rem; }
     
-    /* Timeline Connector */
+    /* Textos dentro del timeline */
+    #timeline-container h5, #timeline-container .h5 { color: white !important; font-weight: 700; margin-bottom: 0.5rem; }
+    #timeline-container .text-muted { color: rgba(255, 255, 255, 0.6) !important; }
+    #timeline-container .text-secondary { color: rgba(255, 255, 255, 0.6) !important; }
+
+    /* Línea de tiempo */
     .timeline-item {
         position: relative;
         padding-left: 2rem;
-        margin-bottom: 2rem;
-        border-left: 2px solid #e9ecef;
+        border-left: 2px solid rgba(255, 255, 255, 0.1);
+        margin-left: 1rem;
     }
     
-    /* El "punto" en la línea de tiempo */
     .timeline-item::before {
         content: '';
         position: absolute;
         left: -9px;
-        top: 15px;
+        top: 0;
         width: 16px;
         height: 16px;
         border-radius: 50%;
-        background-color: #0d6efd;
-        border: 3px solid #fff;
-        box-shadow: 0 0 0 2px #e9ecef;
+        background-color: #3b82f6;
+        border: 2px solid rgba(15, 23, 42, 1);
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    }
+
+    /* Badges del JS */
+    .badge { padding: 0.35em 0.65em; border-radius: 0.375rem; font-weight: 600; font-size: 0.75em; }
+    .bg-info { background-color: rgba(14, 165, 233, 0.2) !important; color: #7dd3fc !important; border: 1px solid rgba(14, 165, 233, 0.4); }
+    .bg-warning { background-color: rgba(245, 158, 11, 0.2) !important; color: #fcd34d !important; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .bg-success { background-color: rgba(16, 185, 129, 0.2) !important; color: #6ee7b7 !important; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+    /* =========================================
+       MODAL GLASS - CORREGIDO (Más claro/transparente)
+       ========================================= */
+    .modal-content {
+        /* Usamos rgba con 0.65 de opacidad para que sea más cristalino y menos "negro" */
+        background: rgba(15, 23, 42, 0.65) !important; 
+        backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important; /* Borde más brillante */
+        border-radius: 1.5rem !important;
+        color: white !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
     }
     
-    .medical-card {
-        border: none;
-        border-radius: 12px;
-        transition: transform 0.2s;
-        background: white;
+    .modal-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background: transparent !important;
+        padding: 1.5rem !important;
     }
     
-    .medical-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    .modal-body { padding: 1.5rem !important; }
+    
+    .modal-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background: transparent !important; /* Totalmente transparente */
+        padding: 1rem 1.5rem !important;
+    }
+
+    .btn-close { 
+        filter: invert(1) grayscale(100%) brightness(200%); 
+        opacity: 0.8;
+    }
+
+    /* Inputs Glass */
+    .glass-input {
+        background-color: rgba(255, 255, 255, 0.07) !important; /* Un poco más claros */
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: white !important;
+    }
+    .glass-input:focus {
+        background-color: rgba(255, 255, 255, 0.12) !important;
+        border-color: rgba(96, 165, 250, 0.6) !important;
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.1) !important;
+        outline: none !important;
     }
     
-    .vital-chip {
-        display: inline-flex;
-        align-items-center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        background: #f8f9fa;
-        font-size: 0.9rem;
-        font-weight: 500;
+    /* Placeholders más visibles */
+    .glass-input::placeholder {
+        color: rgba(255, 255, 255, 0.5) !important;
+    }
+
+    select.glass-input option {
+        background-color: #1e293b;
+        color: white;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Controles dinámicos según rol -->
-<div id="navigation-controls" class="mb-4">
-    <!-- Se llenará dinámicamente con JavaScript -->
-</div>
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full pb-10">
 
-<div class="row g-4">
-    <!-- COLUMNA IZQUIERDA: Perfil del Paciente (Sticky) -->
-    <div class="col-lg-3">
-        <div class="card shadow-sm sticky-top" style="top: 1rem; border-radius: 16px;">
-            <div class="card-body text-center p-4">
-                <!-- Avatar Paciente -->
-                <div class="mb-3">
-                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center" 
-                         style="width: 120px; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                        <i class="fas fa-paw text-white" style="font-size: 3rem;"></i>
-                    </div>
+    <div class="lg:col-span-1">
+        <div class="glass-panel p-6 rounded-2xl sticky top-4 space-y-6 text-center">
+            
+            <div class="relative inline-block">
+                <div class="w-32 h-32 rounded-full mx-auto flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 shadow-xl border-4 border-white/10">
+                    <i class="fas fa-paw text-white text-5xl"></i>
                 </div>
-                
-                <!-- Nombre Paciente -->
-                <h3 id="paciente-nombre" class="h4 fw-bold text-dark mb-2">Cargando...</h3>
-                <div class="text-muted mb-3">
-                    <span id="paciente-especie">-</span> • <span id="paciente-raza">-</span>
-                </div>
-                
-                <!-- Información con iconos -->
-                <div class="bg-light rounded-3 p-3 mb-3 text-start">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small">
-                            <i class="fas fa-birthday-cake text-primary me-2"></i>Edad:
-                        </span>
-                        <span id="paciente-edad" class="fw-semibold">-</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small">
-                            <i class="fas fa-dna text-success me-2"></i>Raza:
-                        </span>
-                        <span id="paciente-raza-detail" class="fw-semibold">-</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">
-                            <i class="fas fa-user text-info me-2"></i>Tutor:
-                        </span>
-                        <span id="paciente-tutor" class="fw-semibold">-</span>
-                    </div>
-                </div>
-                
-                {% if not es_tutor %}
-                <button id="btn-nueva-ficha" onclick="abrirModalFicha()" class="btn btn-primary w-100 py-2 rounded-pill shadow-sm">
-                    <i class="fas fa-file-medical me-2"></i>Nueva Consulta
-                </button>
-                {% endif %}
+                <div class="absolute bottom-1 right-1 w-7 h-7 bg-green-500 rounded-full border-4 border-slate-900 shadow-lg" title="Paciente Activo"></div>
             </div>
+            
+            <div>
+                <h3 id="paciente-nombre" class="text-2xl font-bold text-white mb-1">Cargando...</h3>
+                <p class="text-white/60 text-sm">
+                    <span id="paciente-especie">-</span> • <span id="paciente-raza">-</span>
+                </p>
+            </div>
+            
+            <div class="bg-white/5 rounded-xl p-4 text-left space-y-3 border border-white/5">
+                <div class="flex justify-between items-center">
+                    <span class="text-white/50 text-xs uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-birthday-cake text-blue-400"></i> Edad
+                    </span>
+                    <span id="paciente-edad" class="text-white font-medium">-</span>
+                </div>
+                <div class="h-px bg-white/10 w-full"></div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/50 text-xs uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-dna text-purple-400"></i> Raza
+                    </span>
+                    <span id="paciente-raza-detail" class="text-white font-medium">-</span>
+                </div>
+                <div class="h-px bg-white/10 w-full"></div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/50 text-xs uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-user text-green-400"></i> Tutor
+                    </span>
+                    <span id="paciente-tutor" class="text-white font-medium">-</span>
+                </div>
+            </div>
+            
+            {% if not es_tutor %}
+            <button id="btn-nueva-ficha" onclick="abrirModalFicha()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold shadow-lg shadow-blue-900/20 transition transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                <i class="fas fa-plus-circle"></i>
+                <span>Nueva Consulta</span>
+            </button>
+            {% endif %}
         </div>
     </div>
     
-    <!-- COLUMNA DERECHA: Timeline de Historial -->
-    <div class="col-lg-9">
-        <div class="d-flex align-items-center mb-4">
-            <div class="border-start border-primary border-4 ps-3">
-                <h4 class="fw-bold text-dark mb-0">Historial Clínico</h4>
-                <p class="text-muted small mb-0">Registro cronológico de consultas</p>
+    <div class="lg:col-span-3">
+        
+        <div class="glass-panel p-5 rounded-2xl mb-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                    <i class="fas fa-history text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white">Historial Clínico</h2>
+                    <p class="text-white/60 text-sm">Registro cronológico de consultas y tratamientos</p>
+                </div>
             </div>
+            <div id="navigation-controls"></div>
         </div>
         
-        <div id="timeline-container">
-            <!-- Los items del timeline se inyectan aquí por JS -->
-            <div class="text-center py-5 text-muted">
-                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
-                <p>Cargando historial médico...</p>
+        <div id="timeline-container" class="space-y-6">
+            <div class="glass-panel p-12 rounded-2xl text-center">
+                <i class="fas fa-spinner fa-spin text-4xl text-blue-400 mb-4"></i>
+                <p class="text-white/60 text-lg">Cargando expediente médico...</p>
             </div>
         </div>
     </div>
 </div>
 
 {% if not es_tutor %}
-<!-- Modal Nueva Ficha (Solo para Veterinarios) -->
 <div class="modal fade" id="modalFicha" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-            <!-- Header con color -->
-            <div class="modal-header bg-primary text-white" style="border-radius: 16px 16px 0 0;">
-                <h5 class="modal-title fw-bold">
-                    <i class="fas fa-file-medical me-2"></i>Registrar Consulta
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-2">
+                    <i class="fas fa-file-medical text-blue-400"></i> Registrar Consulta
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             
-            <div class="modal-body p-4">
-                <div id="ficha-error" class="alert alert-danger d-none" role="alert"></div>
+            <div class="modal-body">
+                <div id="ficha-error" class="hidden bg-red-500/20 border border-red-500/50 text-red-100 p-3 rounded-lg mb-4 text-sm"></div>
 
-                <form id="formFicha">
-                    <!-- Motivo de Consulta -->
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            <i class="fas fa-clipboard-list text-primary me-2"></i>Motivo de Consulta *
-                        </label>
-                        <input type="text" id="ficha-motivo" class="form-control" placeholder="Ej: Control rutinario, vacunación..." required>
+                <form id="formFicha" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-white/80 mb-2">Motivo de Consulta <span class="text-red-400">*</span></label>
+                        <input type="text" id="ficha-motivo" class="w-full px-4 py-3 rounded-xl glass-input placeholder-white/30" placeholder="Ej: Control rutinario, vacunación..." required>
                     </div>
 
-                    <!-- Diagnóstico -->
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            <i class="fas fa-stethoscope text-success me-2"></i>Diagnóstico *
-                        </label>
-                        <textarea id="ficha-diagnostico" rows="3" class="form-control" placeholder="Descripción detallada del diagnóstico..." required></textarea>
+                    <div>
+                        <label class="block text-sm font-semibold text-white/80 mb-2">Diagnóstico <span class="text-red-400">*</span></label>
+                        <textarea id="ficha-diagnostico" rows="3" class="w-full px-4 py-3 rounded-xl glass-input placeholder-white/30" placeholder="Descripción detallada del diagnóstico..." required></textarea>
                     </div>
 
-                    <!-- Signos Vitales en 2 columnas -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">
-                                <i class="fas fa-weight text-warning me-2"></i>Peso (kg) *
-                            </label>
-                            <div class="input-group">
-                                <input type="number" step="0.01" min="0.1" id="ficha-peso" class="form-control" placeholder="0.00" required>
-                                <span class="input-group-text bg-light">kg</span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Peso (kg) <span class="text-red-400">*</span></label>
+                            <div class="relative">
+                                <input type="number" step="0.01" min="0.1" id="ficha-peso" class="w-full pl-4 pr-12 py-3 rounded-xl glass-input placeholder-white/30" placeholder="0.00" required>
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 text-sm font-bold">kg</span>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">
-                                <i class="fas fa-thermometer-half text-danger me-2"></i>Temperatura (°C)
-                            </label>
-                            <div class="input-group">
-                                <input type="number" step="0.1" min="35" max="43" id="ficha-temperatura" class="form-control" placeholder="37.5">
-                                <span class="input-group-text bg-light">°C</span>
+                        <div>
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Temperatura (°C)</label>
+                            <div class="relative">
+                                <input type="number" step="0.1" min="35" max="43" id="ficha-temperatura" class="w-full pl-4 pr-12 py-3 rounded-xl glass-input placeholder-white/30" placeholder="37.5">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 text-sm font-bold">°C</span>
                             </div>
-                            <small class="form-text text-muted">Rango normal: 37.5-39.5°C</small>
                         </div>
                     </div>
 
-                    <!-- Notas Adicionales -->
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            <i class="fas fa-notes-medical text-info me-2"></i>Notas Adicionales
-                        </label>
-                        <textarea id="ficha-notas" rows="2" class="form-control" placeholder="Observaciones generales..."></textarea>
+                    <div>
+                        <label class="block text-sm font-semibold text-white/80 mb-2">Notas Adicionales</label>
+                        <textarea id="ficha-notas" rows="2" class="w-full px-4 py-3 rounded-xl glass-input placeholder-white/30" placeholder="Observaciones generales..."></textarea>
                     </div>
 
-                    <!-- Tratamiento / Receta -->
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold d-flex align-items-center">
-                            <i class="fas fa-pills text-purple me-2"></i>
-                            <span>Receta Médica</span>
-                            <span class="badge bg-info ms-2">Opcional</span>
+                    <div class="pt-5 border-t border-white/10">
+                        <label class="flex items-center gap-2 text-sm font-semibold text-white/80 mb-3">
+                            <i class="fas fa-pills text-purple-400"></i> Receta Médica (Opcional)
                         </label>
                         
-                        <div id="medicamentos-container" class="border rounded-3 p-3 bg-light">
-                            <!-- Primera fila de medicamento -->
-                            <div class="row g-2 mb-2 medicamento-row">
-                                <div class="col-md-3">
-                                    <label class="form-label small text-muted">Medicamento</label>
-                                    <input type="text" class="form-control form-control-sm" placeholder="Nombre" name="med_nombre[]">
+                        <div id="medicamentos-container" class="space-y-3 p-4 rounded-xl border border-white/10 bg-white/5">
+                            <div class="medicamento-row grid grid-cols-1 md:grid-cols-12 gap-3">
+                                <div class="md:col-span-3">
+                                    <input type="text" class="w-full px-3 py-2 text-sm rounded-lg glass-input placeholder-white/30" placeholder="Medicamento" name="med_nombre[]">
                                 </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Cantidad</label>
-                                    <input type="number" step="0.01" class="form-control form-control-sm" placeholder="0.00" name="med_cantidad[]">
+                                <div class="md:col-span-2">
+                                    <input type="number" class="w-full px-3 py-2 text-sm rounded-lg glass-input placeholder-white/30" placeholder="Cant." name="med_cantidad[]">
                                 </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Unidad</label>
-                                    <select class="form-select form-select-sm" name="med_unidad[]">
-                                        <option value="">Elegir</option>
+                                <div class="md:col-span-2">
+                                    <select class="w-full px-3 py-2 text-sm rounded-lg glass-input" name="med_unidad[]">
+                                        <option value="">Unidad</option>
                                         <option value="mg">mg</option>
                                         <option value="ml">ml</option>
-                                        <option value="ui">ui</option>
-                                        <option value="comprimidos">comprimidos</option>
-                                        <option value="gotas">gotas</option>
+                                        <option value="comprimidos">comp.</option>
                                     </select>
                                 </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Frecuencia</label>
-                                    <select class="form-select form-select-sm" name="med_frecuencia[]">
-                                        <option value="">Elegir</option>
+                                <div class="md:col-span-3">
+                                    <select class="w-full px-3 py-2 text-sm rounded-lg glass-input" name="med_frecuencia[]">
+                                        <option value="">Frecuencia</option>
                                         <option value="c/24h">c/24h</option>
                                         <option value="c/12h">c/12h</option>
                                         <option value="c/8h">c/8h</option>
                                         <option value="c/6h">c/6h</option>
-                                        <option value="c/4h">c/4h</option>
-                                        <option value="única vez">Única vez</option>
+                                        <option value="unica">Única vez</option>
                                     </select>
                                 </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Duración (días)</label>
-                                    <input type="number" step="1" min="1" class="form-control form-control-sm" placeholder="7" name="med_duracion[]">
-                                </div>
-                                <div class="col-md-1">
-                                    <label class="form-label small text-muted invisible">X</label>
-                                    <button type="button" onclick="eliminarFila(this)" class="btn btn-sm btn-outline-danger w-100 invisible" title="Eliminar">
+                                <div class="md:col-span-2 flex gap-2">
+                                    <input type="number" class="w-full px-3 py-2 text-sm rounded-lg glass-input placeholder-white/30" placeholder="Días" name="med_duracion[]">
+                                    <button type="button" onclick="eliminarFila(this)" class="px-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/40 transition hidden">
                                         <i class="fas fa-times"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Botón para agregar más medicamentos -->
-                        <button type="button" onclick="agregarMedicamento()" class="btn btn-sm btn-outline-primary mt-2">
-                            <i class="fas fa-plus-circle me-1"></i>Agregar Medicamento
+                        <button type="button" onclick="agregarMedicamento()" class="mt-3 text-sm text-blue-300 hover:text-blue-200 flex items-center gap-2 transition font-medium">
+                            <i class="fas fa-plus-circle"></i> Agregar otro medicamento
                         </button>
                     </div>
                 </form>
             </div>
             
-            <div class="modal-footer bg-light" style="border-radius: 0 0 16px 16px;">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" onclick="guardarFicha()" class="btn btn-primary px-4">
-                    <i class="fas fa-save me-2"></i>Guardar Ficha
+            <div class="modal-footer">
+                <button type="button" class="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" onclick="guardarFicha()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold shadow-lg shadow-blue-900/30 transition transform hover:-translate-y-0.5">
+                    <i class="fas fa-save mr-2"></i>Guardar Ficha
                 </button>
             </div>
         </div>

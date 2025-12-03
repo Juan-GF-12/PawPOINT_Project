@@ -143,22 +143,41 @@ class CitaSerializer(serializers.ModelSerializer):
         
         return data
 
+class TratamientoSerializer(serializers.ModelSerializer):
+    """Serializa tratamientos asociados a fichas clínicas."""
+    class Meta:
+        model = Tratamiento
+        fields = '__all__'
+
+
 class FichaClinicaSerializer(serializers.ModelSerializer):
     """Serializa fichas clínicas con veterinario como campo de solo lectura.
     
     El veterinario se asigna automáticamente desde el usuario autenticado
     mediante el método perform_create del ViewSet.
     """
+    tratamientos = TratamientoSerializer(many=True, read_only=True)
+    veterinario_nombre = serializers.SerializerMethodField()
     class Meta:
         model = FichaClinica
-        fields = '__all__'
+        fields = ['id', 
+            'paciente', 
+            'veterinario', 
+            'veterinario_nombre', 
+            'fecha_consulta', 
+            'motivo',          # <--- Ahora sí existe
+            'diagnostico', 
+            'notas_medicas', 
+            'peso', 
+            'temperatura', 
+            'tratamientos']
         read_only_fields = ['veterinario']
 
-class TratamientoSerializer(serializers.ModelSerializer):
-    """Serializa tratamientos asociados a fichas clínicas."""
-    class Meta:
-        model = Tratamiento
-        fields = '__all__'
+    def get_veterinario_nombre(self, obj):
+        if obj.veterinario:
+            return f"{obj.veterinario.first_name} {obj.veterinario.last_name}".strip() or obj.veterinario.username
+        return "Sin asignar"
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     """Serializador para registrar nuevos usuarios."""

@@ -1,0 +1,215 @@
+{% extends 'core/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Pacientes - PawPOINT{% endblock %}
+{% block header_title %}Gestión de Pacientes{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-full space-y-6">
+    
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="relative w-full sm:w-96">
+            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50"></i>
+            <input type="text" id="search-pacientes" placeholder="Buscar por nombre, especie o tutor..." 
+                   class="w-full pl-12 pr-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition shadow-lg text-white">
+        </div>
+
+        <button onclick="abrirModalPaciente()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-blue-600/30 transition transform hover:-translate-y-1 flex items-center gap-2">
+            <i class="fas fa-plus"></i>
+            <span>Nuevo Paciente</span>
+        </button>
+    </div>
+
+    <div class="glass-panel rounded-2xl overflow-hidden flex-1 relative">
+        <div class="overflow-x-auto h-full">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-white/10 text-white/80 uppercase text-xs tracking-wider sticky top-0 backdrop-blur-md z-10">
+                    <tr>
+                        <th class="p-5 font-semibold border-b border-white/10">ID</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Paciente</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Especie</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Raza</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Género</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Edad</th>
+                        <th class="p-5 font-semibold border-b border-white/10">Tutor</th>
+                        <th class="p-5 font-semibold border-b border-white/10 text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="pacientes-table-body" class="divide-y divide-white/10 text-sm">
+                    <tr id="loading-row">
+                        <td colspan="8" class="p-12 text-center text-white/60">
+                            <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
+                            <p>Cargando lista de pacientes...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="modalPaciente" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"></div>
+
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            
+            <div class="relative transform overflow-hidden rounded-2xl bg-[#0f172a]/95 border border-white/20 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl backdrop-blur-xl">
+                
+                <div class="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-blue-900/40 to-purple-900/40">
+                    <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <i class="fas fa-paw text-blue-400"></i> Nuevo Paciente
+                    </h3>
+                    <button type="button" onclick="toggleModal(false)" class="text-white/50 hover:text-white transition focus:outline-none">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+
+                <div class="px-8 py-6">
+                    <div id="form-alert-error" class="hidden bg-red-500/20 border border-red-500/50 text-red-100 p-3 rounded-lg mb-6 flex items-center gap-3">
+                        <i class="fas fa-exclamation-circle text-xl"></i>
+                        <span id="error-message">Error al guardar. Revisa los campos.</span>
+                    </div>
+
+                    <form id="paciente-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <input type="hidden" id="paciente-id" value="">
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Tutor *</label>
+                            <select id="paciente-tutor" class="w-full px-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition text-white" required>
+                                <option value="" class="text-gray-800">Cargando tutores...</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Nombre *</label>
+                            <input type="text" id="paciente-nombre" placeholder="Ej: Max" class="w-full px-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition placeholder-white/30 text-white" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Especie *</label>
+                            <select id="paciente-especie" class="w-full px-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition text-white" required>
+                                <option value="" class="bg-slate-800">Seleccione...</option>
+                                <option value="Perro" class="bg-slate-800">Perro</option>
+                                <option value="Gato" class="bg-slate-800">Gato</option>
+                                <option value="Ave" class="bg-slate-800">Ave</option>
+                                <option value="Conejo" class="bg-slate-800">Conejo</option>
+                                <option value="Reptil" class="bg-slate-800">Reptil</option>
+                                <option value="Roedor" class="bg-slate-800">Roedor</option>
+                                <option value="Otro" class="bg-slate-800">Otro</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Raza</label>
+                            <input type="text" id="paciente-raza" placeholder="Ej: Golden Retriever" class="w-full px-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition placeholder-white/30 text-white">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Género *</label>
+                            <select id="paciente-genero" class="w-full px-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition text-white" required>
+                                <option value="" class="bg-slate-800">Seleccione...</option>
+                                <option value="M" class="bg-slate-800">Macho</option>
+                                <option value="H" class="bg-slate-800">Hembra</option>
+                            </select>
+                        </div>
+
+                        <div class="col-span-2">
+                            <label class="block text-sm font-semibold text-white/80 mb-2">Fecha de Nacimiento *</label>
+                            <input type="date" id="paciente-fecha-nacimiento" class="w-full px-4 py-3 rounded-xl glass-input focus:ring-2 focus:ring-blue-400/50 transition text-white" required>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="px-6 py-4 border-t border-white/10 flex justify-end gap-3 bg-black/20">
+                    <button type="button" onclick="toggleModal(false)" class="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="guardarPaciente()" id="btn-guardar-paciente" class="px-8 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold shadow-lg transition transform hover:-translate-y-0.5">
+                        <span id="btn-guardar-texto"><i class="fas fa-save mr-2"></i>Guardar Paciente</span>
+                        <span id="btn-guardar-spinner" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Guardando...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/pacientes.js' %}"></script>
+<script>
+    // ==========================================
+    // LÓGICA DEL MODAL (Incrustada para asegurar funcionamiento)
+    // ==========================================
+    
+    function toggleModal(show) {
+        const modal = document.getElementById('modalPaciente');
+        if (show) {
+            modal.classList.remove('hidden');
+            // Cargar tutores si el select está vacío
+            const selectTutor = document.getElementById('paciente-tutor');
+            if (selectTutor.options.length <= 1) {
+                cargarTutoresEnSelect();
+            }
+        } else {
+            modal.classList.add('hidden');
+            // Limpiar formulario al cerrar
+            document.getElementById('paciente-form').reset();
+            document.getElementById('form-alert-error').classList.add('hidden');
+        }
+    }
+
+    function abrirModalPaciente() {
+        toggleModal(true);
+    }
+
+    // Función auxiliar para cargar tutores (por si pacientes.js falla en esto)
+    function cargarTutoresEnSelect() {
+        const token = localStorage.getItem('accessToken');
+        fetch('/api/tutores/', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(r => r.json())
+        .then(tutores => {
+            const select = document.getElementById('paciente-tutor');
+            select.innerHTML = '<option value="" class="bg-slate-800">Seleccione un tutor...</option>';
+            tutores.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t.id;
+                option.textContent = `${t.nombre} ${t.apellido} (${t.rut})`;
+                option.className = "bg-slate-800"; // Fondo oscuro para las opciones
+                select.appendChild(option);
+            });
+        })
+        .catch(console.error);
+    }
+
+    // Sobreescribir o conectar con la función de guardar del archivo JS externo
+    // Asegúrate de que en 'pacientes.js' la función 'guardarPaciente' recoja los datos 
+    // y haga el POST correctamente.
+    
+    // Si necesitas que yo reescriba pacientes.js también, avísame.
+</script>
+
+<style>
+    /* Asegura que los selects tengan fondo oscuro en las opciones */
+    select option {
+        background-color: #1e293b;
+        color: white;
+    }
+    
+    /* Input Glass Style */
+    .glass-input {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+    .glass-input:focus {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(96, 165, 250, 0.5);
+        outline: none;
+    }
+</style>
+{% endblock %}
